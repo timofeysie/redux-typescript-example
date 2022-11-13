@@ -116,6 +116,23 @@ That's something I saw in the comments of [this issue](https://github.com/testin
 
 There are no tests also for the new code.  There eventually should be for the api/client.js and api/server.js and maybe the spinner, but since this is TDD, there is no point in going back at this point and testing that working code.  Time to move on.
 
+## Main Posts Feed
+
+(https://redux.js.org/tutorials/essentials/part-3-data-flow#main-posts-feed)
+
+The first goal is to only show the list of post entries.  This starts in the inside the src/features folder which we already have.
+
+We create a posts folder and add a new file named postsSlice.ts (instead of postsSlice.js)
+
+Since we already have a src\features\counter\counterSlice.spec.ts, time to create a postsSlice.spec.ts
+
+As there are no reducers yet, all we can do is test the initial state.
+
+I don't think we test the store directly.  At least not now.  We add the posts: postsReducer to the store.
+
+### Showing the Posts List
+
+
 ## Getting started with the Redux Toolkit counter example
 
 The Redux Essentials tutorial has 7 pages.
