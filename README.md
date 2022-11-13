@@ -7,6 +7,115 @@ npm start
 npm test
 ```
 
+## Starting the social media feed app
+
+At the start of part three we are introduced to the goal of the next few steps: *a small social media feed app, which will include a number of features that demonstrate some real-world use cases.*
+
+This starts with *a pre-configured starter project that already has React and Redux set up, includes some default styling, and has a fake REST API*.
+
+[Here](https://github.com/reduxjs/redux-essentials-example-app) is the starting point codebase.
+
+We will have to diff the current counter app code and see what needs to be added to get to this point.
+
+In the counter app there are two directories in the src:
+
+- app
+- features/counter
+
+In the redux-essentials-example-app there is:
+
+- api
+- app
+- components
+
+Begin by copying the api and components directories here.
+
+In tha app directory, there is also a new file:
+
+src/app/Navbar.js
+
+Copy that file, but change the extension to .tsx.  Do the same for src\components\Spinner.tsx.
+
+The store.js has an empty reducer, so that doesn't need to change here.
+
+Next, use the App.js in the App.tsx here.  This shows that we will need to install react-router-dom.
+
+Then, our first issue:
+
+import Switch
+Module '"react-router-dom"' has no exported member 'Switch'.ts(2305)
+No quick fixes available
+
+This code is old.  There is a comment from Dec 3, 2021: *Use Routes instead of Switch.*
+
+That's an easy *switch* to make.  But then there is another error:
+
+Type '{ exact: true; path: string; render: () => Element; }' is not assignable to type 'IntrinsicAttributes & RouteProps'.
+  Property 'exact' does not exist on type 'IntrinsicAttributes & RouteProps'.ts(2322)
+
+The version we are using:
+
+```json
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-redux": "^8.0.5",
+    "react-router-dom": "^6.4.3",
+```
+
+The Redux example:
+
+```json
+    "react": "^17",
+    "react-dom": "^17",
+    "react-redux": "^7.2.4",
+    "react-router-dom": "^5.1.2",
+```
+
+So that's the problem.  Use a simple example from router 6, then just use the styles from index.css and the app runs and looks good.
+
+## Fixing the tests
+
+Next, the App.tsx test is failing.
+
+Remember, we are looking for the work "Learn".  Change that to "Redux" but still an error:
+
+TestingLibraryElementError: Unable to find an element with the text: Redux.
+
+The original getByText contained a regex.
+
+```tsx
+test('renders learn react link', () => {
+  const { getByText } = render(
+    <Provider store={store}>
+      <App />
+    </Provider>
+  );
+
+  expect(getByText(/learn/i)).toBeInTheDocument();
+});
+```
+
+I can see that there are different formats for it also.
+
+We could use a data-testid.  Since there is no test in the redux-essentials-example-app, it's up to us.
+
+This will work for now:
+
+```tsx
+test('renders learn react link', () => {
+  const { container } = render(
+    <Provider store={store}>
+      <App />
+    </Provider>
+  );
+  expect(container).toHaveTextContent("Redux");
+});
+```
+
+That's something I saw in the comments of [this issue](https://github.com/testing-library/dom-testing-library/issues/410) on the testing-library GitHub.  It works, so time to move on.
+
+There are no tests also for the new code.  There eventually should be for the api/client.js and api/server.js and maybe the spinner, but since this is TDD, there is no point in going back at this point and testing that working code.  Time to move on.
+
 ## Getting started with the Redux Toolkit counter example
 
 The Redux Essentials tutorial has 7 pages.
@@ -14,6 +123,10 @@ The Redux Essentials tutorial has 7 pages.
 In [Part 1: Redux Overview and Concepts](https://redux.js.org/tutorials/essentials/part-1-overview-concepts), there is an overview of Redux and the key concepts of State Management, Immutability, Terminology and Data Flow.
 
 The next page [Redux App Structure](https://redux.js.org/tutorials/essentials/part-2-app-structure) goes over the classic counter app which I have discussed previously in my blog for Angular, but not React.
+
+In [Part 3: Basic Redux Data Flow](https://redux.js.org/tutorials/essentials/part-3-data-flow) they start showing how to build a small social media feed app.  This will be covered in another blog post where I apply Typescript and TDD to that process.
+
+This article is about parts 1 & 2 as they provide the foundation for the next parts.
 
 ### The Counter example
 
@@ -79,32 +192,22 @@ Inside that directory, you can run several commands:
 Happy hacking!
 ```
 
+Now we have an app with .ts files instead of .js files, and .tsx instead of .jsx.
+
 Run the app with 'npm start' and we see the counter example already working.
 
-There is a section on [Using the Counter App with the Redux DevTools](https://redux.js.org/tutorials/essentials/part-2-app-structure#using-the-counter-app).
+After this is the step 2 tutorial there is a section on [Using the Counter App with the Redux DevTools](https://redux.js.org/tutorials/essentials/part-2-app-structure#using-the-counter-app).
 
 A section on [Application Contents and structure](https://redux.js.org/tutorials/essentials/part-2-app-structure#application-contents).
 
-A discussion of app/store.js
-
-[Creating Slice Reducers and Actions](https://redux.js.org/tutorials/essentials/part-2-app-structure#creating-slice-reducers-and-actions)
+A discussion of app/store.js and [Creating Slice Reducers and Actions](https://redux.js.org/tutorials/essentials/part-2-app-structure#creating-slice-reducers-and-actions)
  shows the features/counter/counterSlice.js
-## Original Readme
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) TS template.
-
-Rules of Reducers
-Reducers and Immutable Updates
-
-Redux Toolkit's createSlice function lets you write immutable updates an easier way!
-
-createSlice uses a library called Immer inside. Immer uses a special JS tool called a Proxy to wrap the data you provide, and lets you write code that "mutates" that wrapped data. But, Immer tracks all the changes you've tried to make, and then uses that list of changes to return a safely immutably updated value, 
+This goes over the Rules of Reducers, Reducers and Immutable Updates and shows the Redux Toolkit's createSlice function which lets you write immutable updates an easier way: *createSlice uses a library called Immer inside. Immer uses a special JS tool called a Proxy to wrap the data you provide, and lets you write code that "mutates" that wrapped data. But, Immer tracks all the changes you've tried to make, and then uses that list of changes to return a safely immutably updated value*
 
 It contrasts a  handwrittenReducer with a reducerWithImmer which is all of one line.
 
-Writing Async Logic with Thunks and the incrementAsync example.
-
-Here is the vanilla Javascript file:
+Writing Async Logic with Thunks shows the incrementAsync example code. Here is the vanilla Javascript file:
 
 ```js
 export const incrementAsync = amount => dispatch => {
@@ -114,7 +217,7 @@ export const incrementAsync = amount => dispatch => {
 }
 ```
 
-Here is the Typescript version:
+Here is the Typescript version we have:
 
 ```ts
 export const incrementAsync = createAsyncThunk(
@@ -131,7 +234,11 @@ createAsyncThunk is part of the [Redux toolkit](https://redux-toolkit.js.org/api
 
 There is also a section on the Counter.js component file.
 
-Now, time for the tests.  Out of the box we have a the usual src\App.test.tsx as well as a specification test src\features\counter\counterSlice.spec.ts file.
+Now, time for the tests.  
+
+## Unit Tests
+
+Out of the box we have a the usual src\App.test.tsx as well as a specification test src\features\counter\counterSlice.spec.ts file.
 
 Run 'npm test' and we see this output:
 
@@ -169,7 +276,90 @@ We can fix that error by doing this:
   expect(screen.getByText("Learn")).toBeInTheDocument();
 ```
 
-This should be the first commit we make for this new repo.
+This should be the first commit we make for this new repo:
+
+```shell
+git add .
+git commit  -m "avoiding destructuring queries from render result in the App.test.tsx and using screen.getByText instead"
+```
+
+The src\features\counter\counterSlice.spec.ts file:
+
+```ts
+describe('counter reducer', () => {
+  const initialState: CounterState = {
+    value: 3,
+    status: 'idle',
+  };
+  it('should handle increment', () => {
+    const actual = counterReducer(initialState, increment());
+    expect(actual.value).toEqual(4);
+  });
+```
+
+The above expect line is testing what happens in the Counter.tsx file on the button:
+
+```tsx
+onClick={() => dispatch(increment())}
+```
+
+### Root State and Dispatch Types​
+
+The count from the store is created like this:
+
+```tsx
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { selectCount,} from './counterSlice';
+export function Counter() {
+  const count = useAppSelector(selectCount);
+```
+
+In the hooks.ts file:
+
+```ts
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+```
+
+Compare this to the vanilla Javascript version which looks like this:
+
+```js
+import { useSelector } from 'react-redux';
+import { selectCount } from './counterSlice';
+export function Counter() {
+  const count = useSelector(selectCount);
+```
+
+As you can see, there is now an extra step there in the useSelector process.
+
+TypedUseSelectorHook is discussed in the [Usage with TypeScript](https://react-redux.js.org/using-react-redux/usage-with-typescript) section of the React Redux website.
+
+Since React-Redux is written in TypeScript now, this helper function as the docs say make it *easier to write typesafe interfaces between your Redux store and your React components.*
+
+So the useAppDispatch and useAppSelector are there to *create pre-typed versions of the useDispatch and useSelector hooks for usage in your application.*  This is done in a separate file as they are variables, not types, and this file allows you to import them into any component file that needs to use the hooks and avoids potential circular import dependency issues.
+
+There is also a section called [Typing Hooks Manually​](https://react-redux.js.org/using-react-redux/usage-with-typescript) which I wont cover.
+
+### Store types
+
+One other thing that is different is that there are types exported in the app/store.ts file:
+
+```ts
+export type AppDispatch = typeof store.dispatch;
+export type RootState = ReturnType<typeof store.getState>;
+```
+
+This are not in the vanilla Redux example.  About this the above link says: *extract the RootState type and the Dispatch type so that they can be referenced as needed. Inferring these types from the store itself means that they correctly update as you add more state slices or modify middleware settings.*
+
+There is a discussion of using connect with hooks which the counter example doesn't have.  At the end there are some helpful links which will become important in the next blog post about the small social media feed app that is started in part 3.
+
+- [Redux docs: Usage with TypeScript](https://redux.js.org/recipes/usage-with-typescript): Examples of how to use Redux Toolkit, the Redux core, and React Redux with TypeScript
+- [Redux Toolkit docs: TypeScript Quick start](https://redux-toolkit.js.org/tutorials/typescript): shows how to use RTK and the React-Redux hooks API with TypeScript
+- [React+TypeScript Cheatsheet](https://github.com/typescript-cheatsheets/react-typescript-cheatsheet): a comprehensive guide to using React with TypeScript
+- [React + Redux in TypeScript Guide](https://github.com/piotrwitek/react-redux-typescript-guide): extensive information on patterns for using React and Redux with TypeScript
+
+## Original Readme
+
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) TS template.
 
 ## Available Scripts
 

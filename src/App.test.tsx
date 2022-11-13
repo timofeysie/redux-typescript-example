@@ -5,10 +5,10 @@ import { store } from './app/store';
 import App from './App';
 
 test('renders learn react link', () => {
-  render(
+  const { container } = render(
     <Provider store={store}>
       <App />
     </Provider>
   );
-  expect(screen.getByText("Learn")).toBeInTheDocument();
+  expect(container).toHaveTextContent("Redux");
 });
