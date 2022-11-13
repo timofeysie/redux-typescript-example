@@ -1,4 +1,8 @@
-# React Redux Counter Example
+# React Redux TypeScript Example
+
+This project is based on the example apps from the official [Redux Essentials](https://redux.js.org/tutorials/essentials/part-1-overview-concepts).  This trail focuses on vanilla Javascript.  The goal on this project is to demonstrate a TypeScript implementation of this, as well as provide unit testing where non exists.
+
+It contains the classic counter example along with a small social media feed app.  The code for the project can be found [here](https://github.com/timofeysie/redux-typescript-example).  There are branches named after some of the steps to provide a jumping off point if needed.
 
 ## Workflow
 
@@ -161,6 +165,42 @@ Parameter 'post' implicitly has an 'any' type.ts(7006)
 
 After replacing useSelector with useAppSelector, this error is also gone.
 
+After this, the App.tsx file can import the posts list component and show it in the app.  We can leave the working counter example there if we want also.
+
+```tsx
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <section>
+                <React.Fragment>
+                  <PostsList />
+                </React.Fragment>
+                <Counter />
+              </section>
+            }
+          />
+        </Routes>
+```
+
+Another TypeScript feature encouraged is typing objects with interfaces.
+
+Without being asked to, I created the simple interface for a post:
+
+```ts
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+}
+```
+
+Now we can start to use that wherever a Post object is expected:
+
+```tsx
+const renderedPosts = posts.map((post: Post) => ( ...
+```
+
 ## Getting started with the Redux Toolkit counter example
 
 The Redux Essentials tutorial has 7 pages.
@@ -183,7 +223,7 @@ The app is begun in the tutorial like this:
 npx create-react-app redux-essentials-example --template redux
 ```
 
-However, this does not use TypeScript.  Using TypeScript as well as unit testing using TDD is the goal of this article.
+However, this does not use TypeScript.  Using TypeScript as well as unit testing the example code is the goal of this article.
 
 ### Redux + TypeScript template
 
