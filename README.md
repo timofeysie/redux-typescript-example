@@ -132,6 +132,34 @@ I don't think we test the store directly.  At least not now.  We add the posts: 
 
 ### Showing the Posts List
 
+The PostsList component needs some TypeScript changes.
+
+posts/PostsList.js
+
+```tsx
+export const PostsList = () => {
+  const posts = useSelector(state => state.posts)
+```
+
+```sh
+Object is of type 'unknown'.ts(2571)
+```
+
+Remember useAppSelector from the counter example?  It's a pre-typed versions of the useSelector hook.
+
+If we import that and use it instead of useSelector, then that error goes away.
+
+Before the above, the next line was also showing a TypeScript error.
+
+```tsx
+  const renderedPosts = posts.map(post => (
+```
+
+```sh
+Parameter 'post' implicitly has an 'any' type.ts(7006)
+```
+
+After replacing useSelector with useAppSelector, this error is also gone.
 
 ## Getting started with the Redux Toolkit counter example
 
