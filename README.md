@@ -201,6 +201,206 @@ Now we can start to use that wherever a Post object is expected:
 const renderedPosts = posts.map((post: Post) => ( ...
 ```
 
+### Adding New Posts
+
+In [this step](https://redux.js.org/tutorials/essentials/part-3-data-flow#adding-new-posts) the AddPostForm.js is added to the posts directory.
+
+Since this is a TypeScript JSX format file, the extension should now be using .tsx.  I'm not sure why on the website it's using .js instead of jsx.  A JSX returns JavaScript XML not JavaScript as it contains HTML in React.  If you are following along with this as a tutorial, then make the following change:
+
+features/posts/AddPostForm.js -> AddPostForm.tsx
+
+There are two useState hooks that need some TypeScript:
+
+```jsx
+  const onTitleChanged = e => setTitle(e.target.value)
+  const onContentChanged = e => setContent(e.target.value)
+```
+
+Both event objects have the same error in VSCode:
+
+Parameter 'e' implicitly has an 'any' type.ts(7006)
+
+The quick way out of this kind of error is to use the any type:
+
+const onTitleChanged = (e: any) => setTitle(e.target.value)
+
+This is OK to get on with work and test features, but it's bad form when using TypeScript, and should only be used if using the appropriate type is causing issues, in which case, you should leave a comment that excuses it's use explicitly.
+
+We can see that the function calling that setter is a button which looks like this (in breif):
+
+```html
+<input onChange={onTitleChanged} />
+```
+
+There is a [cheat-sheet](https://github.com/typescript-cheatsheets/react) which has a specific section for [Forms and Events](https://github.com/typescript-cheatsheets/react#forms-and-events).  This shows a few examples such as this:
+
+```js
+/** function type syntax that takes an event (VERY COMMON) */
+onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+```
+
+Using that in the add posts form looks like this:
+
+```js
+const onTitleChanged = (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)
+```
+
+However, now there is an error on the onChange={onContentChanged} event:
+
+```txt
+(property) React.TextareaHTMLAttributes<HTMLTextAreaElement>.onChange?: React.ChangeEventHandler<HTMLTextAreaElement> | undefined
+Type '(e: React.ChangeEvent<HTMLInputElement>) => void' is not assignable to type 'ChangeEventHandler<HTMLTextAreaElement>'.
+  Types of parameters 'e' and 'event' are incompatible.
+    Type 'ChangeEvent<HTMLTextAreaElement>' is not assignable to type 'ChangeEvent<HTMLInputElement>'.
+      Type 'HTMLTextAreaElement' is missing the following properties from type 'HTMLInputElement': accept, align, alt, capture, and 27 more.ts(2322)
+index.d.ts(2461, 9): The expected type comes from property 'onChange' which is declared here on type 'DetailedHTMLProps<TextareaHTMLAttributes<HTMLTextAreaElement>, HTMLTextAreaElement>'
+```
+
+React.ChangeEvent<HTMLInputElement>
+
+This seems like another option:
+
+React.FormEvent<HTMLInputElement>
+
+const onTitleChanged = (e: React.FormEvent<HTMLInputElement>) => setTitle((e.target as HTMLInputElement).value)
+
+However, the error on onChange only gets longer.
+
+The issue here is that there are two different types needed, depending on the input.  For example:
+
+```ts
+const onTitleChanged = (e: React.FormEvent<HTMLInputElement>) => setTitle((e.target as HTMLInputElement).value)
+const onContentChanged = (e: React.FormEvent<HTMLTextAreaElement>) => setContent((e.target as HTMLInputElement).value)
+...
+return (
+      <input nChange={onTitleChanged} />
+      <textarea onChange={onContentChanged} />
+)
+```
+
+The input element uses HTMLInputElement and the textarea uses HTMLTextAreaElement.
+
+Next import that component into App.tsx, and add it right above the <PostsList /> component:
+
+The form is not  doing anything yet, so we don't need to make a test now.  After the next step, we can update the postsSlice.spec.ts which currently only tests the initial state.
+
+### Create a reducer to save a new post
+
+The next section is [Saving Post Entries](https://redux.js.org/tutorials/essentials/part-3-data-flow#saving-post-entries).
+
+In the empty reducers argument to the createSlice function in the postsSlice.ts file, we create postAdded which has two arguments: the current state value, and the action object that was dispatched.  It looks like this:
+
+```ts
+reducers: {
+  postAdded(state, action) {
+    state.push(action.payload)
+  }
+}
+```
+
+We also need to createSlice automatically generates an action creator to dispatch from the UI when when the user clicks "Save Post".
+
+```ts
+export const { postAdded } = postsSlice.actions
+```
+
+The above [destructured assignment](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment) export might look a little strange to some.  What it is doing is exporting just the postAdded action which is created by the Redux Toolkit [createSlice function](https://redux-toolkit.js.org/api/createslice) which *generates action creators and action types that correspond to the reducers and state*.  The only part we need from that is the postAdded action.
+
+No TypeScript changes need to be made for this update.
+
+### Creating a post id on dispatch
+
+A new post needs to have an id.  The tutorial shows how to generated a random unique ID with the Redux Toolkit nanoid function we can use for that.
+
+AddPostForm.tsx
+
+```ts
+import { useDispatch } from 'react-redux'
+import { nanoid } from '@reduxjs/toolkit'
+import { postAdded } from './postsSlice'
+```
+
+You can now see how the id is created and the action is dispatched:
+
+```ts
+const onSavePostClicked = () => {
+  if (title && content) {
+    dispatch(
+      postAdded({
+        id: nanoid(),
+        title,
+        content,
+      })
+    );
+
+    setTitle("");
+    setContent("");
+  }
+};
+```
+
+### Missing styles
+
+If you've been following along an got to this point, you might notice that when you run the app, the styles are missing for the form.
+
+You can see what it should look like in the [completed example vanilla app](https://codesandbox.io/s/github/reduxjs/redux-essentials-example-app/tree/tutorial-steps?file=/src/App.js) which is running on codesandbox.io.
+
+If you inspect the form, you can see the styles are coming from a file called primitiveui.css
+
+The Redux Essentials tutorial doesn't mention anything about this.  That's understandable, as they are focusing on teaching Redux Toolkit features.  However, as a frontend developer, we always need to worry about style.  So I want to first of all find out how the styles broke, and then how to fix them.
+
+My first guess is the missing styles have something to do with the changes made in the router and the way the components are now used in the App.tsx.
+
+I will update this section once I've figured out what's going on and how to fix it.
+
+### Unit testing the save added post function
+
+After this change a post can be added and a unit test for the add can be created in the postsSlice.spec.ts.
+
+Similar to the form, import the reducer:
+
+postsSlice.spec.ts
+
+```tsx
+import { postAdded } from "./postsSlice";
+```
+
+Then create an expected posts array.  The reducer takes the initial state, and the postAdded action with the wanted content.
+
+```ts
+const expectedPostAddedState = [
+  { id: "1", title: "First Post!", content: "Hello!" },
+  { id: "2", title: "Second Post", content: "More text" },
+  { id: "3", title: "test-title", content: "test-content" },
+];
+it('should handle increment', () => {
+  const actualState = postsReducer(initialState, postAdded({
+    id: "3",
+    title: "test-title",
+    content: "test-content",
+  }));
+  expect(actualState).toEqual(expectedPostAddedState);
+});
+```
+
+Now we have some decent tests that cover some of the functionality added.
+
+```txt
+Test Suites: 3 passed, 3 total
+Tests:       7 passed, 7 total
+```
+
+This is the end of step three.  I hope you have a good idea now of how to incorporate TypeScripts and unit testing into a React app using the Redux toolkit.
+
+In [the next step](https://redux.js.org/tutorials/essentials/part-4-using-data) the following will be covered:
+
+- Creating a Single Post Page
+- Editing Posts
+- Updating Post Entries
+- Users and Posts
+- Sorting the Posts List
+- Post Reaction Buttons
+
 ## Getting started with the Redux Toolkit counter example
 
 The Redux Essentials tutorial has 7 pages.
