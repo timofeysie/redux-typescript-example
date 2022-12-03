@@ -19,7 +19,7 @@ export const SinglePostPage = () => {
   }
 
   return (
-    <section>
+    <section data-testid="location-display">
       <article className="post">
         <h2>{post.title}</h2>
         <p className="post-content">{post.content}</p>

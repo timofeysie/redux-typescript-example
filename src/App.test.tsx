@@ -4,24 +4,42 @@ import { store } from "./app/store";
 import App from "./App";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
+import { BrowserRouter, MemoryRouter } from "react-router-dom"
 
-test("renders learn react link", () => {
-  const { container } = render(
-    <Provider store={store}>
-      <App />
-    </Provider>
-  );
+test("renders a title with Redux in it", () => {
+const { container } = render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  { wrapper: BrowserRouter }
+);
   expect(container).toHaveTextContent("Redux");
 });
 
-test("full app rendering/navigating", async () => {
-  render(
-    <Provider store={store}>
-      <App />
-    </Provider>
-  );
+test("navigates to the first post and back again", async () => {
+render(
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  { wrapper: BrowserRouter }
+);
   const user = userEvent.setup();
-  expect(screen.getByText(/posts/i)).toBeInTheDocument();
+  expect(screen.getByTestId("post-list-title")).toBeInTheDocument();
   await user.click(screen.getAllByText(/View Post/i)[0]);
   expect(screen.getByText(/First Post!/i)).toBeInTheDocument();
+  expect(screen.getByTestId("location-display")).toBeInTheDocument();
+  await user.click(screen.getByTestId("nav-post-link"));
+  expect(screen.getByTestId("post-list-title")).toBeInTheDocument();
+});
+
+test("landing on a bad page", () => {
+  const badRoute = "/posts/100";
+  render(
+    <MemoryRouter initialEntries={[badRoute]}>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </MemoryRouter>
+  );
+  expect(screen.getByText(/Post not found!/i)).toBeInTheDocument();
 });
