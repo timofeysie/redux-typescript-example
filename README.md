@@ -347,11 +347,60 @@ You can see what it should look like in the [completed example vanilla app](http
 
 If you inspect the form, you can see the styles are coming from a file called primitiveui.css
 
-The Redux Essentials tutorial doesn't mention anything about this.  That's understandable, as they are focusing on teaching Redux Toolkit features.  However, as a frontend developer, we always need to worry about style.  So I want to first of all find out how the styles broke, and then how to fix them.
+The Redux Essentials tutorial doesn't mention anything about this.  That's understandable, as they are focusing on teaching Redux Toolkit features.  However, as a frontend developer, we always need to worry about style.  So I want to find out how the styles broke and fix them.
 
-My first guess is the missing styles have something to do with the changes made in the router and the way the components are now used in the App.tsx.
+My first guess is the missing styles have something to do with the changes made in the router and the way the components are now used in the App.tsx.  I'm probably wrong about that.  For now, we can add our own styles that match the UI and move on.
 
-I will update this section once I've figured out what's going on and how to fix it.
+In the src\features\posts\AddPostForm.tsx file:
+
+The section tag can re-use the posts-list class.
+
+```html
+<section className="posts-list">
+```
+
+Then, we also need a form-input class for the inputs and the button muted-button classes for the button:
+
+```html
+        <input
+          type="text"
+          id="postTitle"
+          name="postTitle"
+          value={title}
+          onChange={onTitleChanged}
+          className="form-input"
+        />
+        <label htmlFor="postContent">Content:</label>
+        <textarea
+          id="postContent"
+          name="postContent"
+          value={content}
+          onChange={onContentChanged}
+          className="form-input"
+        />
+        <button
+          type="button"
+          onClick={onSavePostClicked}
+          className="button muted-button"
+        >
+          Save Post
+        </button>
+```
+
+Then, add this class in the src\index.css file:
+
+```css
+/* form styles */
+.form-input {
+  margin: 10px;
+}
+
+.muted-button {
+  border: none;
+}
+```
+
+And then things don't look so ugly now.  I haven't discovered why the styles aren't like they are in the online demo yet.  When I go over this trail again on the next major version, I will be sure to try and figure it out then.
 
 ### Unit testing the save added post function
 
@@ -390,7 +439,13 @@ Test Suites: 3 passed, 3 total
 Tests:       7 passed, 7 total
 ```
 
+(To add to the page writings\redux-essentials-app-in-typescript.md)
+
+## Summary so far
+
 This is the end of step three.  I hope you have a good idea now of how to incorporate TypeScripts and unit testing into a React app using the Redux toolkit.
+
+The commit for the above add post form work can be found [here](https://github.com/timofeysie/redux-typescript-example/commit/2d18b74728fe01bc8eb5b1c41b3a7d896b3787df).
 
 In [the next step](https://redux.js.org/tutorials/essentials/part-4-using-data) the following will be covered:
 
@@ -400,6 +455,598 @@ In [the next step](https://redux.js.org/tutorials/essentials/part-4-using-data) 
 - Users and Posts
 - Sorting the Posts List
 - Post Reaction Buttons
+
+Use the hashtag #ReactReduxTypescriptExample and the link below on Twitter for any comments or feedback.
+
+## Showing Single Posts
+
+Part 4 of the Redux Essentials trail covers [Showing Single Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#showing-single-posts).
+
+Begin by copying the code from the above linked section for features/posts/SinglePostPage.js making sure to change the file extension from *.js* to *.tsx*.
+
+There will be a few TypeScript errors at the top of the file shown here:
+
+```ts
+export const SinglePostPage = ({ match }) => {
+  const { postId } = match.params
+
+  const post = useSelector(state =>
+    state.posts.find(post => post.id === postId)
+  )
+  ...
+}
+```
+
+The first line has this error on the match argument:
+
+```err
+Binding element 'match' implicitly has an 'any' type.ts(7031)
+No quick fixes available
+```
+
+Next, the state inside the useSelector has this error:
+
+```err
+Object is of type 'unknown'.ts(2571)
+```
+
+And lastly, on the same line as the state error, post similarly shows this error:
+
+```err
+Parameter 'post' implicitly has an 'any' type.ts(7006)
+```
+
+### Typing props
+
+The first error on the *match* object in the SinglePostPage highlights an important part of TypeScript with React.
+
+The error reads: Binding element 'match' implicitly has an 'any' type.ts(7031)
+
+Objects with props need types like this: 
+
+```javascript
+{a,b} : {a:any, b:any}
+```
+
+We want to try harder and avoid the 'any' cop-out if we can.  And we have some details about the match object in the docs: *React Router will pass in a match object as a prop that contains the URL information we're looking for. When we set up the route to render this component, we're going to tell it to parse the second part of the URL as a variable named postId, and we can read that value from match.params.*
+
+There was no mention of the match prop for React Router 6 in the cheat-sheet.
+
+In general, to type props, you create an interface at the top of the file after the imports.  The object name + "Props" is the usual naming standard.  It looks something like this:
+
+```ts
+interface SinglePostPageProps {
+    match: {
+        params: any;
+    }
+}
+
+export const SinglePostPage = ({ match }: SinglePostPageProps) => { ... }
+```
+
+This will work to make the error go away, but again, we don't want to rely on any if it can be helped.  It would be OK to get this feature working and then come back and type it when we know what it is.  There are changes to the Router v6 which I will talk about in a minute.
+
+### useAppSelector not useSelector
+
+The next error comes from the useSelector.
+
+```ts
+const post = useSelector(state =>
+  state.posts.find(post => post.id === postId)
+)
+```
+
+It causes this error:
+
+```err
+Object is of type 'unknown'.ts(2571)
+```
+
+The post object similarly shows this error:
+
+```err
+Parameter 'post' implicitly has an 'any' type.ts(7006)
+```
+
+To use useAppSelector, first import it and just switch it in:
+
+```ts
+import { useAppSelector } from "../../app/hooks"
+...
+  const post = useAppSelector(state =>
+    state.posts.find(post => post.id === postId)
+  )
+```
+
+Errors begone!  We will deal with the post ID next.
+
+### The Single page Router
+
+We have to use React Router 6 syntax again for the single page route.  It seems like this should work:
+
+```ts
+<Route
+  path="/posts/:postId"
+  element={
+    <section>
+      <React.Fragment>
+        <SinglePostPage />
+      </React.Fragment>
+    </section>
+  }
+/>
+```
+
+However, we get this error:
+
+```err
+Property 'match' is missing in type '{}' but required in type 'SinglePostPageProps'.ts(2741)
+SinglePostPage.tsx(5, 5): 'match' is declared here.
+```
+
+Apparently, as of React Router v6, there is no passing of props via the router.  Instead we are meant to use functional components and router hooks to detect url changes.  Why oh why all the breaking changes?  OK, I'm sure they had a good reason to break from v5.
+
+The React hooks that are provided by the router are:
+
+- useLocation
+- useParams
+- useNavigate
+
+What this means for our app here is that you can forget all that about typing the props from above.  I'm not sure if this is the best practice for getting the router param, but this does work:
+
+In the App.tsx file, we don't actually need the React.Fragment, section or other wrapper.  This is the basic form:
+
+```ts
+<Route
+  path="/posts/:postId"
+  element={<SinglePostPage />
+  }
+/>
+```
+
+Then, we need to import the useParams hook, and use it to get the ID.
+
+```ts
+import { useParams } from "react-router-dom";
+...
+export const SinglePostPage = () => {
+  const params = useParams();
+  const postId = params.postId;
+  ...
+}
+```
+
+Then in the PostsList.tsx:
+
+```ts
+...
+import { Link } from 'react-router-dom'
+
+export const PostsList = () => {
+  const posts = useAppSelector((state) => state.posts);
+  const renderedPosts = posts.map((post: Post) => (
+    <article className="post-excerpt" key={post.id}>
+      <h3>{post.title}</h3>
+      <p className="post-content">{post.content.substring(0, 100)}</p>
+      <Link to={`/posts/${post.id}`} className="button muted-button">
+        View Post
+      </Link>
+    </article>
+  ))
+  ...
+}
+```
+
+Then if you run the app, the routing works and we have a detail page.
+
+
+** current mark **
+
+
+### Testing the routes
+
+Next, we want to test the routing to give us confidence in case something breaks it in the future.
+
+The recommended way to test the router is by seeing what's on the page, choosing a route, and then see what's on the page again after the router does it's thing.  Since the test will be looking at the DOM, we can dust off that old App.test.tsx which renders the App and checks for the string "Redux".
+
+[The official testing library docs](https://testing-library.com/docs/example-react-router/) for the router show how to use the MemoryRouter which allows us to manually control the router history.
+
+Testing a route looks like this:
+
+```ts
+import { render, screen } from "@testing-library/react"
+import { Provider } from 'react-redux'
+import { store } from './app/store'
+import App from './App'
+import userEvent from '@testing-library/user-event'
+import '@testing-library/jest-dom'
+
+test('full app rendering/navigating', async () => {
+  render(<Provider store={store}>
+    <App />
+  </Provider>)
+  const user = userEvent.setup()
+  expect(screen.getByText(/posts/i)).toBeInTheDocument()
+  await user.click(screen.getAllByText(/View Post/i)[0])
+  expect(screen.getByText(/First Post!/i)).toBeInTheDocument()
+})
+```
+
+In the first expect we verify page content for default route which contains the title "Posts".
+The userEvent.click function from the testing library clicks the button.  Since all the buttons have the same text "View Post", we have to use the getAllByText and take the first one in the array.
+The last expect verifies page content for the expected route after navigating to the post.
+
+### Using a test id
+
+The last expect could also now fail if someone changes the initial posts which is just dummy content added for the tutorial.  Eventually we will have real content, but we don't want a test failing for something that is not a problem with the app itself.  So what we can do here is use a test id.  We can put this in the detail page
+
+data-testid="location-display"
+
+Next, if we want to test the post not found page, we have a bit of a problem with the way the router is set up.  The App.tsx file has the router and the route.  We want to do this to test the bad page route:
+
+```ts
+test("landing on a bad page", () => {
+  const badRoute = "/posts/100";
+  render(
+    <MemoryRouter initialEntries={[badRoute]}>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </MemoryRouter>
+  );
+  expect(screen.getByText(/Post not found!/i)).toBeInTheDocument();
+});
+```
+
+Wrapping a router with a router will give the following error.
+
+You cannot render a <Router> inside another <Router>. You should never have more than one in your app.
+
+The solution is to move the router to index.js.
+
+```ts
+root.render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <Router>
+        <App />
+      </Router>
+    </Provider>
+  </React.StrictMode>
+);
+```
+
+Also remove <Router> from the App.tsx.  Since the router was the enclosing tag, we would get an error if we just remove it.
+
+```ts
+function App() {
+  return (
+    <Router>
+      <Navbar />
+      <div className="App">
+      ...
+      </div>
+    </Router>
+  )
+}
+```
+
+Remove router there and you will see an error - *JSX expressions must have one parent element.ts(2657)*
+
+I have seen many people add an empty tag as a parent element.  I've also heard that this is not considered a best practice.  
+
+```ts
+function App() {
+  return (
+    <>
+      <Navbar />
+      ...
+    </>
+  )
+}
+```
+
+It's called a React fragment.  It fixes the issues without adding extra nodes to the DOM.
+
+Now however, the first two test will fail with a message like this.
+
+*useRoutes() may be used only in the context of a <Router> component.*
+
+We have to add a router wrapper to those App components also.  It is actually done with a wrapper.
+
+```txt
+const { container } = render(
+  <Provider store={store}>
+    <App />
+  </Provider>, {wrapper: BrowserRouter})
+```
+
+And there we go, more tests and hopefully able to sleep a bit better.
+
+Next the tutorial adds a link back to the main posts page in the <Navbar> component.
+
+```ts
+import { Link } from 'react-router-dom'
+...
+<div className="navContent">
+  <div className="navLinks">
+    <Link to="/">Posts</Link>
+  </div>
+</div>
+```
+
+Another test can be written for this as well.  If you run the tests after making the above change, you will notice that our first router test is failing now.
+
+We were looking for the work "Posts", of which there are two now, causing the *TestingLibraryElementError: Found multiple elements with the text: /Posts/i* message.
+
+This can also be fixed with a test-id.  Add this to the title on the PostsList.tsx file:
+
+```ts
+ <h2 data-testid="post-list-title">Posts</h2>
+ ```
+
+The App.test.tsx can be updated to use the id.
+
+```ts
+expect(screen.getByTestId('post-list-title')).toBeInTheDocument();
+await user.click(screen.getAllByText(/View Post/i)[0]);
+expect(screen.getByText(/First Post!/i)).toBeInTheDocument();
+expect(screen.getByTestId('location-display')).toBeInTheDocument()
+```
+
+Now the presence of the id is being looked for and wont be affected by content change.
+
+We can use the same method to test the nav link which should be back to the posts list.  Ad the below at the end of the same test case and we have another regression test ready to go.
+
+```ts
+await user.click(screen.getByTestId("nav-post-link"));
+expect(screen.getByTestId('post-list-title')).toBeInTheDocument();
+```
+
+```txt
+Test Suites: 3 passed, 3 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        2.353 s, estimated 7 s
+```
+
+That's enough for this article.  Next up in step four of the Redux essentials tutorials is [editing the posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts).
+
+Step four is a big one.  After editing there is a section for Users and Posts and another for More Post Features.  That's probably another two more articles each for those.  I hope you enjoyed the content.  Please reach out on twitter with the hashtag #ReduxEssentialsInTypeScript if you have any questions or feedback.  See you next time.
+
+(to add next section also)
+
+# Editing a post with Redux and TypeScript
+
+[Editing Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts) is part of step 4 from the Redux Essentials learning trail.
+
+In this part we create an <EditPostForm> component to do the following:
+
+- take an existing post ID,
+- read that post from the store, lets the user
+- edit the title and post content, and then
+- save the changes to update the post in the store.
+
+This functionality requires
+
+- a postsSlice to create a new reducer function
+- an action to dispatch and update posts
+
+### tip
+
+To follow along with this article in code you can clone the current state of the Redux Essentials demo app in TypeScript from this repo.
+
+## The reducer and the action object
+
+Inside of the createSlice() reducers object add a new function.  The reducer name will show up as part of the action type string in the Redux DevTools.  Remember that the reducer is responsible for determining how the state should be updated.  Our first reducer was called postAdded, so let's call this one postUpdated.
+
+The action object will look like this:
+
+```javascript
+{
+  type: 'posts/postUpdated',
+  payload: {
+    id, title, content
+  }
+}
+```
+
+- The Type field is a descriptive string
+- The payload field be an object with the form fields
+
+The action generated by createSlice accepts one argument which goes into the action object as action.payload.
+
+The reducer must:
+- find the right post object based on the ID
+- update the title and content fields in that post
+
+export the action creator function that createSlice generated for us,
+so that the UI can dispatch the new postUpdated action when the user saves the post.
+
+Given all those requirements, here's how our postsSlice definition should look after we're done:
+
+```js
+reducers: {
+  ...
+  postUpdated(state, action) {
+    const { id, title, content } = action.payload
+    const existingPost = state.find(post => post.id === id)
+    if (existingPost) {
+      existingPost.title = title
+      existingPost.content = content
+    }
+  }
+}
+```
+
+### The EditPostForm
+
+Take the features/posts/EditPostForm.js code shown in the [editing posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts) section and rename it EditPostForm.jsx in our project.
+
+The first error is this:
+
+```javascript
+import { useHistory } from 'react-router-dom'
+```
+
+*Module '"react-router-dom"' has no exported member 'useHistory'.ts(2305)*
+
+In react-router-dom v6 useHistory() is replaced by useNavigate().  Also, the 'match' param will have to be replaced as it was in the SinglePpstPage.tsx component.
+``
+```javascript
+import { postUpdated } from './postsSlice'
+
+export const EditPostForm = ({ match }) => {
+  const { postId } = match.params
+
+  const post = useSelector(state =>
+    state.posts.find(post => post.id === postId)
+  )
+  ...
+}
+```
+
+Instead of useSelector, we have useAppSelector.  Also import the useParams so we can replace the match param with a hook version using useParams:
+
+```javascript
+import { useAppSelector } from "../../app/hooks"
+import { useParams } from "react-router-dom"
+
+export const EditPostForm = () => {
+    const params = useParams();
+    const postId = params.postId;
+    ...
+}
+```
+
+The next issue comes from these lines.
+
+```javascript
+const [title, setTitle] = useState(post.title)
+const [content, setContent] = useState(post.content)
+```
+
+The error being that *Object is possibly 'undefined'.ts(2532)*
+
+With the release of TypeScript 3.7, optional chaining is available.
+
+Optional chaining uses "?" to avoid undefined properties.
+
+The solution is to use that for post: ```post?.title``` and ```post?.content```
+
+Next, the event objects need to be typed.
+
+```javascript
+const onTitleChanged = e => setTitle(e.target.value)
+const onContentChanged = e => setContent(e.target.value)
+```
+
+As was done previously, we need to see what kind of input the event is coming from to type if correctly.
+
+```html
+<input
+  type="text"
+  id="postTitle"
+  name="postTitle"
+  placeholder="What's on your mind?"
+  value={title}
+  onChange={onTitleChanged}
+/>
+<textarea
+  id="postContent"
+  name="postContent"
+  value={content}
+  onChange={onContentChanged}
+/>
+```
+
+So our types will be the same as the AddPostForm.tsx from the [last post]()
+
+```javascript
+const onTitleChanged = (e: React.FormEvent<HTMLInputElement>) =>
+  setTitle((e.target as HTMLInputElement).value);
+const onContentChanged = (e: React.FormEvent<HTMLTextAreaElement>) =>
+  setContent((e.target as HTMLInputElement).value);
+```
+
+Since this is repeating exactly what was done there, it would be good to refactor later and have one shared component for the create and update form.  Just an idea.  It's also a good idea to keep a list of things you want to refactor so it doesn't get lost in the deluge of work.
+
+Now there is only one error left with the new form.
+
+```javascript
+const onSavePostClicked = () => {
+  if (title && content) {
+    dispatch(postUpdated({ id: postId, title, content }))
+    history.push(`/posts/${postId}`)
+  }
+}
+```
+
+The error on "push" says: *Property 'push' does not exist on type 'NavigateFunction'.ts(2339)*
+
+The useNavigate hook returns a function, not a history object with a push method.
+Rename history to navigate so there's no future confusion: ```const navigate = useNavigate()```
+
+Then replace the push line with this:
+
+```javascript
+navigate(`/posts${postId}`);
+```
+
+### Using the form
+
+Now we import and add the form component to the App.tsx routes.  The tutorial is currently using the React Router v5.
+
+```javascript
+<Route exact path="/editPost/:postId" component={EditPostForm} />
+```
+
+Since we are using Router v6 here, our version should look like this:
+
+```javascript
+<Route path="/editPost/:postId" element={<EditPostForm />} />
+```
+
+The link goes on the SinglePostPage.tsx component where we import the
+
+```javascript
+<Link to={`/editPost/${post.id}`} className="button">
+  Edit Post
+</Link>
+```
+
+## Test the forms
+
+Testing the edit for can be done the same way that the add post form was tested in the previous article.  The src/features/posts/postsSlice.spec.ts can use the postUpdated action.  We pass it the postAddedState which is the same one we used for the add post test, and then edit the third item there and expect
+
+```javascript
+const postUpdatedState = [
+  { id: "1", title: "First Post!", content: "Hello!" },
+  { id: "2", title: "Second Post", content: "More text" },
+  { id: "3", title: "test-title-edit", content: "test-content-edit" },
+];
+it('edit a post', () => {
+  const actual = postsReducer(postAddedState, postUpdated({
+    id: "3",
+    title: "test-title-edit",
+    content: "test-content-edit",
+  }));
+  expect(actual).toEqual(postUpdatedState);
+});
+```
+
+There is probably a better way to setup and run the test that doesn't rely on arrays like this, but this will do for now.
+
+```text
+Test Suites: 3 passed, 3 total
+Tests:       10 passed, 10 total
+```
+
+This gives one confidence that the app is working, which helps when refactoring is done.  It just so happens that in the next section, the id field is refactored to use a Redux toolkit nano id, which will make it interesting for these tests since they rely on simple id values.
+
+## Refactoring with reducer prepare
+
+In the [Preparing Action Payloads](https://redux.js.org/tutorials/essentials/part-4-using-data#preparing-action-payloads) there is a discussion about where to put the logic to create the id.  The solution is to use a "prepare callback" which takes multiple arguments, generate random values like unique IDs, and run whatever other synchronous logic is needed to decide what values go into the action object.
 
 ## Getting started with the Redux Toolkit counter example
 

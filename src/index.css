@@ -271,3 +271,17 @@ button.reaction-button {
 .notification.new {
   background-color: rgba(29, 161, 242, 0.1);
 }
+
+/* form styles */
+.form-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-input {
+  margin: 10px;
+}
+
+.muted-button {
+  border: none;
+}

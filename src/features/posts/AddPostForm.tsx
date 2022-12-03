@@ -28,9 +28,9 @@ export const AddPostForm = () => {
     }
   };
   return (
-    <section>
+    <section className="posts-list">
       <h2>Add a New Post</h2>
-      <form>
+      <form className="post-excerpt form-container">
         <label htmlFor="postTitle">Post Title:</label>
         <input
           type="text"
@@ -38,6 +38,7 @@ export const AddPostForm = () => {
           name="postTitle"
           value={title}
           onChange={onTitleChanged}
+          className="form-input"
         />
         <label htmlFor="postContent">Content:</label>
         <textarea
@@ -45,8 +46,13 @@ export const AddPostForm = () => {
           name="postContent"
           value={content}
           onChange={onContentChanged}
+          className="form-input"
         />
-        <button type="button" onClick={onSavePostClicked}>
+        <button
+          type="button"
+          onClick={onSavePostClicked}
+          className="button muted-button"
+        >
           Save Post
         </button>
       </form>
