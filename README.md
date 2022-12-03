@@ -406,7 +406,7 @@ And then things don't look so ugly now.  I haven't discovered why the styles are
 
 After this change a post can be added and a unit test for the add can be created in the postsSlice.spec.ts.
 
-Similar to the form, import the reducer:
+Similar to the form, import the reducer if it's not already there:
 
 postsSlice.spec.ts
 
@@ -565,6 +565,10 @@ Errors begone!  We will deal with the post ID next.
 We have to use React Router 6 syntax again for the single page route.  It seems like this should work:
 
 ```ts
+import { SinglePostPage } from "./features/posts/SinglePostPage";
+
+...
+
 <Route
   path="/posts/:postId"
   element={
@@ -639,9 +643,17 @@ export const PostsList = () => {
 
 Then if you run the app, the routing works and we have a detail page.
 
+To get back to the main page, this step also adds a link in the app/Navbar.js (which is app/Navbar.tsx for us).  This requires importing the Link component for the React Router and filling in the nav links div.
 
-** current mark **
+```JavaScript
+import { Link } from 'react-router-dom'
 
+... omitted code ...
+
+  <div className="navLinks">
+    <Link to="/">Posts</Link>
+  </div>
+```
 
 ### Testing the routes
 
@@ -651,7 +663,7 @@ The recommended way to test the router is by seeing what's on the page, choosing
 
 [The official testing library docs](https://testing-library.com/docs/example-react-router/) for the router show how to use the MemoryRouter which allows us to manually control the router history.
 
-Testing a route looks like this:
+Testing a route in App.test.tsx looks like this:
 
 ```ts
 import { render, screen } from "@testing-library/react"
