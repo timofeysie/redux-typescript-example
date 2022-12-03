@@ -1,5 +1,5 @@
 import postsReducer from "./postsSlice";
-import { postAdded } from "./postsSlice";
+import { postAdded, postUpdated } from "./postsSlice";
 
 describe("counter reducer", () => {
   const initialState = [
@@ -10,6 +10,11 @@ describe("counter reducer", () => {
     { id: "1", title: "First Post!", content: "Hello!" },
     { id: "2", title: "Second Post", content: "More text" },
     { id: "3", title: "test-title", content: "test-content" },
+  ];
+  const postUpdatedState = [
+    { id: "1", title: "First Post!", content: "Hello!" },
+    { id: "2", title: "Second Post", content: "More text" },
+    { id: "3", title: "test-title-edit", content: "test-content-edit" },
   ];
   it("should handle initial state", () => {
     expect(postsReducer(undefined, { type: "unknown" })).toEqual(initialState);
@@ -26,5 +31,15 @@ describe("counter reducer", () => {
     );
     expect(actualState).toEqual(expectedPostAddedState);
   });
-
+it("edit a post", () => {
+  const actual = postsReducer(
+    expectedPostAddedState,
+    postUpdated({
+      id: "3",
+      title: "test-title-edit",
+      content: "test-content-edit",
+    })
+  );
+  expect(actual).toEqual(postUpdatedState);
+});
 });

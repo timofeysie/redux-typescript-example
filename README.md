@@ -1074,7 +1074,7 @@ The link goes on the SinglePostPage.tsx component where we import the
 
 ## Test the forms
 
-Testing the edit for can be done the same way that the add post form was tested in the previous article.  The src/features/posts/postsSlice.spec.ts can use the postUpdated action.  We pass it the postAddedState which is the same one we used for the add post test, and then edit the third item there and expect
+Testing the edit for can be done the same way that the add post form was tested in the "Unit testing the save added post function" section.  The src/features/posts/postsSlice.spec.ts can use the postUpdated action.  We pass it the postAddedState which is the same one we used for the add post test, and then edit the third item there and expect the result.
 
 ```javascript
 const postUpdatedState = [
@@ -1099,7 +1099,7 @@ Test Suites: 3 passed, 3 total
 Tests:       10 passed, 10 total
 ```
 
-This gives one confidence that the app is working, which helps when refactoring is done.  It just so happens that in the next section, the id field is refactored to use a Redux toolkit nano id, which will make it interesting for these tests since they rely on simple id values.
+This gives one confidence that the app is working, which helps when refactoring.  It just so happens that in the next section, the id field is refactored to use a Redux toolkit nano id, which will make it interesting for these tests since they rely on simple id values.
 
 ## Refactoring with reducer prepare
 
