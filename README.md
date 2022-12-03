@@ -643,17 +643,7 @@ export const PostsList = () => {
 
 Then if you run the app, the routing works and we have a detail page.
 
-To get back to the main page, this step also adds a link in the app/Navbar.js (which is app/Navbar.tsx for us).  This requires importing the Link component for the React Router and filling in the nav links div.
-
-```JavaScript
-import { Link } from 'react-router-dom'
-
-... omitted code ...
-
-  <div className="navLinks">
-    <Link to="/">Posts</Link>
-  </div>
-```
+To get back to the main page, this step also adds a link in the app/Navbar.js (which is app/Navbar.tsx for us).  That will happen after we test the initial route first.
 
 ### Testing the routes
 
@@ -712,11 +702,15 @@ test("landing on a bad page", () => {
 
 Wrapping a router with a router will give the following error.
 
-You cannot render a <Router> inside another <Router>. You should never have more than one in your app.
+*You cannot render a <Router> inside another <Router>. You should never have more than one in your app.*
 
-The solution is to move the router to index.js.
+The solution is to move the router to index.js (index.tsx).
 
 ```ts
+import {
+  BrowserRouter as Router,
+} from "react-router-dom";
+... omitted code ...
 root.render(
   <React.StrictMode>
     <Provider store={store}>
@@ -736,7 +730,7 @@ function App() {
     <Router>
       <Navbar />
       <div className="App">
-      ...
+      ... omitted code ...
       </div>
     </Router>
   )
@@ -752,7 +746,7 @@ function App() {
   return (
     <>
       <Navbar />
-      ...
+      ... omitted code ...
     </>
   )
 }
@@ -766,7 +760,7 @@ Now however, the first two test will fail with a message like this.
 
 We have to add a router wrapper to those App components also.  It is actually done with a wrapper.
 
-```txt
+```JavaScript
 const { container } = render(
   <Provider store={store}>
     <App />
@@ -794,21 +788,44 @@ We were looking for the work "Posts", of which there are two now, causing the *T
 This can also be fixed with a test-id.  Add this to the title on the PostsList.tsx file:
 
 ```ts
- <h2 data-testid="post-list-title">Posts</h2>
- ```
+<h2 data-testid="post-list-title">Posts</h2>
+```
+
+We also want to add a test id to to the src\features\posts\SinglePostPage.tsx:
+
+```JavaScript
+  return (
+    <section data-testid="location-display">
+      <article className="post">
+        <h2>{post.title}</h2>
+        <p className="post-content">{post.content}</p>
+      </article>
+    </section>
+  );
+```
 
 The App.test.tsx can be updated to use the id.
 
 ```ts
-expect(screen.getByTestId('post-list-title')).toBeInTheDocument();
-await user.click(screen.getAllByText(/View Post/i)[0]);
-expect(screen.getByText(/First Post!/i)).toBeInTheDocument();
+expect(screen.getByTestId('post-list-title')).toBeInTheDocument()
+await user.click(screen.getAllByText(/View Post/i)[0])
+expect(screen.getByText(/First Post!/i)).toBeInTheDocument()
 expect(screen.getByTestId('location-display')).toBeInTheDocument()
 ```
 
 Now the presence of the id is being looked for and wont be affected by content change.
 
-We can use the same method to test the nav link which should be back to the posts list.  Ad the below at the end of the same test case and we have another regression test ready to go.
+We can use the same method to test the nav link which should be back to the posts list.
+
+Put a test id on the nav link:
+
+```JavaScript
+<div className="navLinks">
+  <Link to="/" data-testid="nav-post-link">Posts</Link>
+</div>
+```
+a
+Add the below at the end of the same test case and we have another regression test ready to go.
 
 ```ts
 await user.click(screen.getByTestId("nav-post-link"));
@@ -822,13 +839,13 @@ Snapshots:   0 total
 Time:        2.353 s, estimated 7 s
 ```
 
-That's enough for this article.  Next up in step four of the Redux essentials tutorials is [editing the posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts).
+That's enough for this section.  Next up in step four of the Redux essentials tutorials is [editing the posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts).
 
-Step four is a big one.  After editing there is a section for Users and Posts and another for More Post Features.  That's probably another two more articles each for those.  I hope you enjoyed the content.  Please reach out on twitter with the hashtag #ReduxEssentialsInTypeScript if you have any questions or feedback.  See you next time.
+Step four is a big one.  After editing a post there is a section for Users and Posts and another for More Post Features.  Instead of creating separate posts for those, I will keep adding sections here.
 
-(to add next section also)
+I hope you enjoyed the content.  Please reach out on twitter with the hashtag #ReduxEssentialsInTypeScript if you have any questions or feedback.  See you next time.
 
-# Editing a post with Redux and TypeScript
+## Editing a post with Redux and TypeScript
 
 [Editing Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#editing-posts) is part of step 4 from the Redux Essentials learning trail.
 

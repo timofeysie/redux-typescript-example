@@ -8,7 +8,7 @@ export const Navbar = () => {
 
         <div className="navContent">
           <div className="navLinks">
-            <Link to="/">Posts</Link>
+            <Link to="/" data-testid="nav-post-link">Posts</Link>
           </div>
         </div>
       </section>
