@@ -31,15 +31,15 @@ describe("counter reducer", () => {
     );
     expect(actualState).toEqual(expectedPostAddedState);
   });
-it("edit a post", () => {
-  const actual = postsReducer(
-    expectedPostAddedState,
-    postUpdated({
-      id: "3",
-      title: "test-title-edit",
-      content: "test-content-edit",
-    })
-  );
-  expect(actual).toEqual(postUpdatedState);
-});
+  it("edit a post", () => {
+    const actual = postsReducer(
+      expectedPostAddedState,
+      postUpdated({
+        id: "3",
+        title: "test-title-edit",
+        content: "test-content-edit",
+      })
+    );
+    expect(actual).toEqual(postUpdatedState);
+  });
 });
