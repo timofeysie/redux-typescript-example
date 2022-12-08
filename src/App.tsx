@@ -6,6 +6,7 @@ import { PostsList } from "./features/posts/PostsList";
 import { AddPostForm } from "./features/posts/AddPostForm";
 import { SinglePostPage } from "./features/posts/SinglePostPage";
 import { EditPostForm } from "./features/posts/EditPostForm"
+import ChartContainer from "./features/graphs/ChartContainer"
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             element={
               <section>
                 <React.Fragment>
+                  <ChartContainer />
                   <PostsList />
                   <AddPostForm />
                 </React.Fragment>
