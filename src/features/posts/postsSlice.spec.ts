@@ -23,13 +23,12 @@ describe("counter reducer", () => {
   it("should handle increment", () => {
     const actualState = postsReducer(
       initialState,
-      postAdded({
-        id: "3",
-        title: "test-title",
-        content: "test-content",
-      })
+      postAdded("test-title", "test-content")
     );
-    expect(actualState).toEqual(expectedPostAddedState);
+    expect(actualState.length).toEqual(initialState.length + 1);
+    const actualText = actualState[initialState.length].title;
+    const expectedText = "test-title";
+    expect(actualText).toEqual(expectedText);
   });
   it("edit a post", () => {
     const actual = postsReducer(

@@ -1345,9 +1345,241 @@ This gives one confidence that the app is working, which helps when refactoring.
 
 [Here](https://github.com/timofeysie/redux-typescript-example/tree/part-4-edit-post) is the branch for the completed code from this section.
 
-## Refactoring with reducer prepare
+## Refactoring with reducer prepare callback
 
 In the [Preparing Action Payloads](https://redux.js.org/tutorials/essentials/part-4-using-data#preparing-action-payloads) there is a discussion about where to put the logic to create the id.  The solution is to use a "prepare callback" which takes multiple arguments, generate random values like unique IDs, and run whatever other synchronous logic is needed to decide what values go into the action object.
+
+Since the toolkit createSlice function generates the action for us, the prepare callback is a way to include logic that in the past would have been put into the hand-written action.  Here is the example of how to do this:
+
+features/posts/postsSlice.js
+
+```javascript
+const postsSlice = createSlice({
+  name: 'posts',
+  initialState,
+  reducers: {
+    postAdded: {
+      reducer(state, action) {
+        state.push(action.payload)
+      },
+      prepare(title, content) {
+        return {
+          payload: {
+            id: nanoid(),
+            title,
+            content
+          }
+        }
+      }
+    },
+    // other reducers here
+  }
+})
+```
+
+We will have to add nanoid to the imports of the slice also.
+
+Then we have to remove the nano id from the dispatch in the add post form.
+
+src/features/posts/AddPostForm.tsx
+
+```javascript
+dispatch(
+  postAdded({
+    id: nanoid(),
+    title,
+    content,
+  })
+);
+```
+
+The above now becomes:
+
+```javascript
+dispatch(postAdded(title, content))
+```
+
+To make this change, you have to move the import from the add post form to the posts slice file.
+
+Then you might notice a few errors remaining in both files.
+
+The red squiggly underline of "prepare" in the posts slice file has an extremely long and very common type of TypeScript error when you mouse over it:
+
+```error
+Type '(title: any, content: any) => { payload: { id: string; title: any; content: any; }; }' is not assignable to type '((title: any, content: any) => { payload: { id: string; title: any; content: any; }; }) & ((...a: never[]) => Omit<PayloadAction<any, string, any, any>, "type">)'.
+  Type '(title: any, content: any) => { payload: { id: string; title: any; content: any; }; }' is not assignable to type '(...a: never[]) => Omit<PayloadAction<any, string, any, any>, "type">'.
+    Type '{ payload: { id: string; title: any; content: any; }; }' is missing the following properties from type 'Omit<PayloadAction<any, string, any, any>, "type">': meta, errorts(2322)
+postsSlice.ts(17, 7): The expected type comes from property 'prepare' which is declared here on type '{ reducer(state: WritableDraft<{ id: string;
+  title: string; content: string; }>[], action: PayloadAction<any, string, any, any>): void; prepare(title: any, content: any): { ...; }; } & { ...; }'
+```
+
+That's a lot of detail to get in a little mouseover window.  Reformatting the error could make it more understandable:
+
+```error
+Type '(title: any, content: any) => { payload: { id: string; title: any; content: any; }; }'
+is not assignable to
+type '((title: any, content: any) => { payload: { id: string; title: any; content: any; }; })
+& ((...a: never[]) => Omit<PayloadAction<any, string, any, any>, "type">)'.
+
+Type '(title: any, content: any) => { payload: { id: string; title: any; content: any; }; }'
+is not assignable to type
+'(...a: never[]) => Omit<PayloadAction<any, string, any, any>, "type">'.
+
+Type '{ payload: { id: string; title: any; content: any; }; }'
+is missing the following properties from type 'Omit<PayloadAction<any, string, any, any>, "type">': meta, errorts(2322)
+
+postsSlice.ts(17, 7):
+The expected type comes from property 'prepare' which is declared here on type
+'{ reducer(state: WritableDraft<{ id: string;
+  title: string; content: string; }>[], action: PayloadAction<any, string, any, any>): void; prepare(title: any, content: any): { ...; }; } & { ...; }'
+```
+
+The format of these kind of type errors is:
+
+```error
+Type 'x' is not assignable to type 'y'.
+Type 'x' is not assignable to type 'z'.
+Type 'x' is missing the following properties from type 'z': meta, errorts(2322)
+The expected type comes from property 'prepare' which is declared here on type ''
+```
+
+Where:
+
+```txt
+x = { payload: { id: string; title: any; content: any; }; }
+z = Omit<PayloadAction<any, string, any, any>, "type"> (the callback)
+y = x + z
+```
+
+There is a section on the Redux "Usage with TypeScript" page about [Typing prepare Callbacks](https://redux.js.org/usage/usage-with-typescript#typing-prepare-callbacks) which shows a special notation for defining the prepare callback.
+
+The code example there is from some fictitious receiveAll reducer:
+
+```javascript
+receivedAll: {
+  reducer(
+    state,
+    action: PayloadAction<Page[], string, { currentPage: number }>
+  ) {
+    state.all = action.payload
+    state.meta = action.meta
+  },
+  prepare(payload: Page[], currentPage: number) {
+    return { payload, meta: { currentPage } }
+  }
+}
+```
+
+Compare this to our postAdded function, and you will see, they are quite different.
+
+```javascript
+postAdded: {
+  reducer(state, action) {
+    state.push(action.payload)
+  },
+  prepare(title, content) {
+    return {
+      payload: {
+        id: nanoid(),
+        title,
+        content
+      }
+    }
+  }
+},
+```
+
+I'm not sure how to use the PayloadAction type.  I started with 'any' and the app ran.  Then I played around with it until this worked also.
+
+We must replace this:
+
+```javascript
+reducer(state, action) {
+  state.push(action.payload)
+},
+```
+
+With this:
+
+```javascript
+reducer(
+  state,
+  action: PayloadAction<{ id: string; title: string; content: string }>
+) {
+  state.push(action.payload);
+},
+```
+
+PayloadAction also needs to be added to the toolkit import.
+
+Aren't we were removing the id from the action?  The id is there because the prepare callback adds the id to the payload, so even though it doesn't match the dispatched action from the form, it's there because the end result is an action that includes an id.
+
+The new id will look something like this: id:"ZOPIUMfyw6hgZ3RFMDyhN"
+
+However, if you run the app at this point, there is an error in postsSlice.spec.ts:
+
+```txt
+TS2554: Expected 2 arguments, but got 1.
+```
+
+Even though the app should run, it's a shame that an out of date test will break it.
+
+### Fixing the slice unit test
+
+The unit test has been working of incremental numbers previously.  Run the tests and you will get something like this:
+
+```errors
+FAIL  src/features/posts/postsSlice.spec.ts
+ ● posts reducer › should handle post
+   expect(received).toEqual(expected) // deep equality
+   - Expected  - 1
+   + Received  + 1
+   @@ -9,9 +9,9 @@
+         "id": "2",
+         "title": "Second Post",
+       },
+       Object {
+         "content": "test-content",
+   -     "id": "3",
+   +     "id": "XaAJCkKYzv-ZXMiErLrjn",
+         "title": "test-title",
+       },
+     ]
+```
+
+That's because this is what we are expecting:
+
+```javascript
+const expectedPostAddedState = [
+  { id: "1", title: "First Post!", content: "Hello!" },
+  { id: "2", title: "Second Post", content: "More text" },
+  { id: "3", title: "test-title", content: "test-content" },
+];
+```
+
+The simplest way to fix this is just check for length:
+
+```javascript
+expect(actualState.length).toEqual(initialState.length + 1);
+```
+
+The postAdded call also needs to be updated to remove the id:
+
+```javascript
+postAdded("test-title", "test-content")
+```
+
+We don't need the awkward expectedPostAddedState array anymore, so delete that.
+
+We can also then individually check the title or content or both for the expected values if we need more safety.
+
+```javascript
+const actualText  = actualState[initialState.length].title;
+const expectedText = "test-title";
+expect(actualText).toEqual(expectedText);
+```
+
+Now there are ten passing tests once again.  Refactor complete.
 
 ## Original Readme
 
