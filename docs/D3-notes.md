@@ -80,7 +80,7 @@ interface Props {
 }
 ```
 
-Now, provided the styles needed for the bar graph are in the index.css, the chart works!
+Now, provided the styles needed for the bar chart are in the index.css, the chart works!
 
 ## What's next
 
@@ -97,4 +97,18 @@ The objects in the sample data array look like this:
 },
 ```
 
-First we need a unit test for this new feature.
+A sample post looks like this:
+
+```js
+{ id: "1", 
+  title: "First Post!", 
+  content: "Hello!" },
+```
+
+So not really much to go on.  It will be better later when authors are introduces, and we can graph the number of posts per user or something.
+
+For now:
+
+- we need a unit test for this new feature
+- need to convert the chart class to a functional component
+- the svg line graph is a more useful D3 example
