@@ -1581,6 +1581,255 @@ expect(actualText).toEqual(expectedText);
 
 Now there are ten passing tests once again.  Refactor complete.
 
+## Authors and Posts
+
+The next step is [Users and Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#users-and-posts).  It consists of two parts:
+
+- Adding a Users Slice
+- Adding Authors for Posts
+
+Note: to follow along, the starting point for this code is in the [part-4-preparing-action-payloads](https://github.com/timofeysie/redux-typescript-example/tree/part-4-preparing-action-payloads) branch of my [redux-typescript-example](https://github.com/timofeysie/redux-typescript-example) repo.
+
+Now, the Users and Posts section calls for creating a new feature directory called users.  The first file to go in it is this:
+
+```text
+features/users/usersSlice.js
+```
+
+Lets create that directory and file and change the extension to usersSlice.ts
+
+Copy the source from the [code example](import { createSlice } from '@reduxjs/toolkit'
+
+const initialState = [
+  { id: '0', name: 'Tianna Jenkins' },
+  { id: '1', name: 'Kevin Grant' },
+  { id: '2', name: 'Madison Price' }
+]
+
+const usersSlice = createSlice({
+  name: 'users',
+  initialState,
+  reducers: {}
+})
+
+export default usersSlice.reducer) and there are no TypeScript errors with this new file.  So time to create a unit test file for it also:
+
+```text
+features/users/usersSlice.spec.ts
+```
+
+Similar to the posts slice spec, we just set it up to test the initial state:
+
+```javascript
+import usersReducer from "./usersSlice"
+describe("posts reducer", () => {
+  const initialState = [
+    { id: "0", name: "Tianna Jenkins" },
+    { id: "1", name: "Kevin Grant" },
+    { id: "2", name: "Madison Price" },
+  ];
+  it("should handle initial state", () => {
+    expect(usersReducer(undefined, { type: "unknown" })).toEqual(initialState)
+  })
+})
+```
+
+We are only testing the initial state of the createSlice function with no reducers yet, so this test should pass.
+
+Next this new usersReducer is imported into the store file in app/store.ts and added it to the setup.
+
+Next is [Adding Authors for Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#adding-authors-for-posts).  In the postSlice.ts file update the postAdded action creator prepare callback to accept a user ID as an argument and include that in the action
+
+Next update the existing post entries in initialState to have a post.user field with one of the user IDs
+
+Then in the AddPostForm, read the list of users and put them in a dropdown. Add validation to the form so that the user can only click the "Save Post" button if the title and content inputs have text.
+
+features/posts/AddPostForm.js
+
+const users = useSelector(state => state.users)
+
+'state' is of type 'unknown'.ts(18046)
+
+From the [Define Typed Hooks](https://redux.js.org/usage/usage-with-typescript#define-typed-hooks) (from the useful links below) we use the example of the RootState type to fix this:
+
+```javascript
+import type { RootState } from "../../app/store";
+...
+const users = useSelector((state: RootState) => state.users);
+```
+
+The last and next error is then solved by typing the DOM click event which its proper HTML type which is in this case a select element.
+
+This:
+
+```javascript
+const onAuthorChanged = (e) => setUserId(e.target.value);
+```
+
+Becomes this:
+
+```javascript
+const onAuthorChanged = (e: React.FormEvent<HTMLSelectElement>) => setUserId((e.target as HTMLInputElement).value);
+```
+
+Then in order to run the app again, we also need to update the postsSlice.spec.ts postAdded function call to include an id and sole this error:
+
+```txt
+Expected 3 arguments, but got 2.
+    24 |     const actualState = postsReducer(
+    25 |       initialState,
+  > 26 |       postAdded("test-title", "test-content")
+```
+
+This is the author id from the hard-wired list of users, not a post id, so is not using nano yet.  We can update the function like this:
+
+```javascript
+postAdded("test-title", "test-content", 0)
+```
+
+I'm noticing some inconsistences now with this function.
+
+Here the update function has a different signature.
+
+```javascript
+      postUpdated({
+        id: "3",
+        title: "test-title-edit",
+        content: "test-content-edit",
+      })
+```
+
+Here the id is a string, and the argument is an object.  Should there be a consistent pattern that the id is either first or last on all of them to avoid a developer getting used to one method of usage and all of a sudden make a mistake when one exception is used.
+
+### The PostAuthor component
+
+Continuing on in the [Users and Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#users-and-posts) section, next a PostAuthor component is added to show the name of the post's author in two places:
+
+1. inside the post list items
+2. in the <SinglePostPage> component
+
+First create the file PostAuthor.tsx (shown as features/posts/PostAuthor.js in the tutorial)
+
+```javascript
+import React from 'react'
+import { useSelector } from 'react-redux'
+
+export const PostAuthor = ({ userId }) => {
+  const author = useSelector(state =>
+    state.users.find(user => user.id === userId)
+  )
+
+  return <span>by {author ? author.name : 'Unknown author'}</span>
+}
+```
+
+The useSelector hook is the standard way to get data from the store.
+
+Next userId, state and user all need to be typed.
+
+Using RootState can fix up state and user the same way as was done in AddPostForm.
+
+How about userId?  That will require typing the props!
+
+```javascript
+interface PostAuthorProps {
+  userId: string;
+}
+
+export const PostAuthor = ({ userId }: PostAuthorProps) => {
+  ...
+```
+
+In the SinglePostPage.tsx file, there is now an error under the post.user: Property 'user' does not exist on type 'Post'.ts(2339)
+
+ ```javascript
+ <PostAuthor userId={post.user} />
+```
+
+The quick fix is to add a user property to the post interface.
+
+I think at this point we will have to update the interface for a post to something like this:
+
+src\features\posts\Post.ts
+
+```javascript
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  userId?: string;
+  user?: string;
+}
+```
+
+It seems like this should be author, not user, but a user is an author, so whatever.
+
+Next, the red squiggly line moved to userId:
+
+```txt
+Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.ts(2322)
+PostAuthor.tsx(6, 3): The expected type comes from property 'userId' which is declared here on type 'IntrinsicAttributes & PostAuthorProps'
+```
+
+The solution to this type of error is to add a possible undefined type like this:
+
+```javascript
+interface PostAuthorProps {
+  userId: string | undefined;
+}
+```
+
+That's called a [union type](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) which let you combine types.
+
+Now when you add a post, you can choose a user from the select and the author field will appear in the new post.  However, the current posts will be by unknown users.  If you want to fix this, you would have to update the initial state in the posts slice to contain a user field:
+
+const initialState: Post[] = [
+  { id: "1", title: "First Post!", content: "Hello!", user: "0" },
+  { id: "2", title: "Second Post", content: "More text", user: "2" },
+];
+
+### Adding users to the tests
+
+If you run the tests now, there will be one failing:
+
+```jest
+ FAIL  src/features/posts/postsSlice.spec.ts
+  ● counter reducer › should handle initial state
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 2
+
+      Array [
+        Object {
+          "content": "Hello!",
+          "id": "1",
+          "title": "First Post!",
+    +     "user": "0",
+        },
+        Object {
+          "content": "More text",
+          "id": "2",
+          "title": "Second Post",
+    +     "user": "2",
+        },
+      ]
+
+      18 |   ];
+      19 |   it("should handle initial state", () => {
+    > 20 |     expect(postsReducer(undefined, { type: "unknown" })).toEqual(initialState);
+         |                                                          ^
+      21 |   });
+      22 |
+      23 |   it("should handle increment", () => {
+```
+
+Since it's mentioning the counter there, I feel like there was some cutting and pasting from the original counter demo going on.  It's easy to forget to update the *human readable* portion of tests with comments on what is actually testing.  That can also be updated now.
+
+Anyhow, to fix the error, you have to add the user ids to the src\features\posts\postsSlice.spec.ts initialState, expectedPostAddedState and postUpdatedState arrays and then the tests will be green once again.
+
 ## Original Readme
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) TS template.
