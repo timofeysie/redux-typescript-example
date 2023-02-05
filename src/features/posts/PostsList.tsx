@@ -2,7 +2,7 @@ import { useAppSelector } from "../../app/hooks";
 import { Link } from "react-router-dom";
 import { Post } from "./Post";
 import { PostAuthor } from "./PostAuthor";
-
+import { TimeAgo } from "./TimeAgo";
 export const PostsList = () => {
     const posts = useAppSelector((state) => state.posts);
     const orderedPosts = posts
@@ -12,7 +12,11 @@ export const PostsList = () => {
     const renderedPosts = orderedPosts.map((post: Post) => {
         return (
             <article className="post-excerpt" key={post.id}>
-                <h3>{post.title}</h3> <PostAuthor userId={post.user} />
+                <h3>{post.title}</h3>
+                <div>
+                    <PostAuthor userId={post.user} />
+                    <TimeAgo timestamp={post.date} />
+                </div>
                 <p className="post-content">{post.content.substring(0, 100)}</p>
                 <Link to={`/posts/${post.id}`} className="button muted-button">
                     View Post
