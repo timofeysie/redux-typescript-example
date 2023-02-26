@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Post } from "./Post";
 import { PostAuthor } from "./PostAuthor";
 import { TimeAgo } from "./TimeAgo";
+import { ReactionButtons } from "./ReactionButtons";
+
 export const PostsList = () => {
     const posts = useAppSelector((state) => state.posts);
     const orderedPosts = posts
@@ -18,6 +20,7 @@ export const PostsList = () => {
                     <TimeAgo timestamp={post.date} />
                 </div>
                 <p className="post-content">{post.content.substring(0, 100)}</p>
+                <ReactionButtons post={post} />
                 <Link to={`/posts/${post.id}`} className="button muted-button">
                     View Post
                 </Link>

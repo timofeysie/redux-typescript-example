@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useAppSelector } from "../../app/hooks";
 import { PostAuthor } from "./PostAuthor";
 import { Post } from "./Post";
+import { ReactionButtons } from "./ReactionButtons";
 
 export const SinglePostPage = () => {
    const params = useParams();
@@ -21,15 +22,16 @@ export const SinglePostPage = () => {
   }
 
   return (
-    <section data-testid="location-display">
-      <article className="post">
-        <h2>{post.title}</h2>
-        <p className="post-content">{post.content}</p>
-        <PostAuthor userId={post.user} />
-        <Link to={`/editPost/${post.id}`} className="button">
-          Edit Post
-        </Link>
-      </article>
-    </section>
+      <section data-testid="location-display">
+          <article className="post">
+              <h2>{post.title}</h2>
+              <p className="post-content">{post.content}</p>
+              <ReactionButtons post={post} />
+              <PostAuthor userId={post.user} />
+              <Link to={`/editPost/${post.id}`} className="button">
+                  Edit Post
+              </Link>
+          </article>
+      </section>
   );
 };

@@ -43,3 +43,16 @@ test("landing on a bad page", () => {
   );
   expect(screen.getByText(/Post not found!/i)).toBeInTheDocument();
 });
+
+test("reaction buttons increment reaction", async () => {
+    render(
+        <Provider store={store}>
+            <App />
+        </Provider>,
+        { wrapper: BrowserRouter }
+    );
+    const user = userEvent.setup();
+    const thumbsUp = await screen.findAllByText("👍");
+    await user.click(thumbsUp[0]);
+    expect(screen.getByText(/👍/i)).toBeInTheDocument();
+});
