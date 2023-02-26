@@ -1830,6 +1830,585 @@ Since it's mentioning the counter there, I feel like there was some cutting and 
 
 Anyhow, to fix the error, you have to add the user ids to the src\features\posts\postsSlice.spec.ts initialState, expectedPostAddedState and postUpdatedState arrays and then the tests will be green once again.
 
+
+## More Post Features
+
+The last section of part 4 is called [More Post Features](https://redux.js.org/tutorials/essentials/part-4-using-data#more-post-features).  It details adding three features commonly found is social media apps.
+
+- Storing Dates for Posts
+- Sorting the Posts List
+- Post Reaction Buttons
+
+### Storing Dates for Posts
+
+In the [Storing Dates for Posts](https://redux.js.org/tutorials/essentials/part-4-using-data#storing-dates-for-posts) section the tutorial shows adding a TimeAgo.js component.  First, in the postsSlice.tsx file we will add a new date to the prepare callback payload in a similar manner to how the id was created.
+
+```javascript
+      prepare(title, content, userId) {
+        return {
+          payload: {
+            id: nanoid(),
+            date: new Date().toISOString(),
+            title,
+            content,
+            user: userId,
+          },
+        }
+      },
+```
+
+Next we create the time ago component: features/posts/TimeAgo.js.
+
+As usual, ours will be a TypeScript version, so use the .tsx extension TimeAgo.tsx:
+
+```javascript
+import React from 'react'
+import { parseISO, formatDistanceToNow } from 'date-fns'
+
+export const TimeAgo = ({ timestamp }) => {
+  let timeAgo = ''
+  if (timestamp) {
+    const date = parseISO(timestamp)
+    const timePeriod = formatDistanceToNow(date)
+    timeAgo = `${timePeriod} ago`
+  }
+
+  return (
+    <span title={timestamp}>
+      &nbsp; <i>{timeAgo}</i>
+    </span>
+  )
+}
+```
+
+This will require the date-fns library.   So install that as so:
+
+```shell
+npm i date-fns
+```
+
+As with all things TypeScript, we will also need types for this package:
+
+```shell
+npm i @types/date-fns
+```
+
+Next, the timestamp prop needs to be typed, which we can do with an interface to fix this error:
+
+```err
+Binding element 'timestamp' implicitly has an 'any' type.ts(7031)
+```
+
+That looks like this:
+
+```javascript
+interface TimeAgoProps {
+  timestamp: string | undefined;
+}
+
+export const TimeAgo = ({ timestamp }: TimeAgoProps) => {
+```
+
+The TimeAgo component will be added to two places:
+
+1. <PostsList>
+2. <SinglePostPage>
+
+Since the posts are being kept oldest-first in the store, the tutorial shows how to sort them to be newest first.  This is done by comparing the timestamps in PostsList.tsx.
+
+```javascript
+const orderedPosts = posts.slice().sort((a, b) => b.date.localeCompare(a.date))
+const renderedPosts = orderedPosts.map(post => {
+```
+
+At this point we will have to add the date to the Post interface to avoid this error:
+
+```err
+Property 'date' does not exist on type 'Post'.ts(2339)
+```
+
+Add that to the interface and we see this:
+
+'b.date' is possibly 'undefined'.ts(18048)
+
+There is also this error in the <section> tag in the return template.
+
+```err
+This JSX tag's 'children' prop expects a single child of type 'ReactNode', but multiple children were provided.ts(2746)
+```
+
+This is a little tricky, because it's not that tag that's the issue, it's the posts.  We have to put the empty tags around the renderedPosts to fix that.
+
+```javascript
+  return (
+    <section className="posts-list">
+      <h2 data-testid="post-list-title">Posts</h2>
+      <>
+        {renderedPosts}
+      </>
+    </section>
+  );
+```
+
+The code should run now, except the post slice spec test will not let you:
+
+```err
+Compiled with problems:
+ERROR in src/features/posts/postsSlice.spec.ts:30:7
+TS2345: Argument of type '{ id: string; title: string; content: string; user: string; }[]' is not assignable to parameter of type 'Post[]'.
+  Type '{ id: string; title: string; content: string; user: string; }' is missing the following properties from type 'Post': userId, date
+    28 |   it("should handle increment", () => {
+    29 |     const actualState = postsReducer(
+  > 30 |       initialState,
+       |       ^^^^^^^^^^^^
+    31 |       postAdded("test-title", "test-content", 0)
+    32 |     );
+    33 |     expect(actualState.length).toEqual(initialState.length + 1);
+```
+
+Right, have to add dates to the sample posts now.
+
+There is also an error in the postSlice.tsx postAdded reducer now:
+
+```javascript
+    postAdded: {
+      reducer(
+        state,
+        action: PayloadAction<{ id: string; title: string; content: string }>
+      ) {
+        state.push(action.payload);
+      },
+```
+
+Time to update that PayloadAction.  In the src\features\posts\postsSlice.ts file import the Post interface and use it like this:
+
+```javascript
+action: PayloadAction<Post>
+```
+
+Check [this commit](https://github.com/timofeysie/redux-typescript-example/commit/a95a12570be09491eb958791af674c369628362d) to see the changes made so far in adding the date and sorted list.
+
+## Dates and unit tests
+
+There are currently a few failing tests due to the introduction of dates.
+
+```err
+ FAIL  src/features/posts/postsSlice.spec.ts
+  ● posts reducer › should handle initial state
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 2
+    + Received  + 2
+      Array [
+        Object {
+          "content": "Hello!",
+    -     "date": "2023-02-05T02:23:08.932Z",
+    +     "date": "2023-02-05T02:23:08.930Z",
+```
+
+Dates are notorious for making testing complicated.
+
+Advice is to treat time as a dependency, so you can control it in your tests.  But we have already passed that point by moving the date creation logic inside the prepare statement of the postAdded action in the post slice.
+
+Another issue here is that testing the initial state is not really very useful.  What you are testing? If the Redux reducer works? For sure it works, redux developers have already tested it.  We should try to focus tests on logic that could be buggy.
+
+It serves as a starting point when creating a new slice, but I agree it's not a particularly meaningful test.  In this case, if we want to keep this test, then we can just test the length of the result to match the length of the initial state:
+
+```javascript
+expect(postsReducer(undefined, { type: "unknown" })).toHaveLength(initialState.length);
+```
+
+The meaning of each unit test should build up and create a picture of what we think is important in a feature.  In conjunction with the other tests, this might add a small certainty.  Of course, the contents of the initial state could be wrong.  We could test individual properties, but since the initial state is pretty much guaranteed, doing that is not really helpful.
+
+There is one other failing test at this point:
+
+```err
+ FAIL  src/App.test.tsx
+  ● navigates to the first post and back again
+    TestingLibraryElementError: Unable to find an element with the text: /First Post!/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+    
+    Ignored nodes: comments, script, style
+    ...
+        <div
+          class="App"
+        >
+          <section
+            data-testid="location-display"
+          >
+            <article
+              class="post"
+            >
+              <h2>
+                Second Post
+              </h2>
+```
+
+This is because the order of the posts has now changed.  We should be able to update the test like this to make it pass:
+
+```javascript
+  await user.click(screen.getAllByText(/View Post/i)[1]);
+  expect(screen.getByText(/First Post!/i)).toBeInTheDocument();
+```
+
+But that surprisingly doesn't work.  Playing around with it a bit and this passes.
+
+```javascript
+  await user.click(screen.getAllByText(/View Post/i)[1]);
+  expect(screen.getByText(/Second Post/i)).toBeInTheDocument();
+```
+
+I'm a bit confused by this.  I revert that change and the failing test is gone.  Strange.  We will have to keep an eye on this test.
+
+## Emoji reaction buttons
+
+Next up [Post Reaction Buttons](https://redux.js.org/tutorials/essentials/part-4-using-data#post-reaction-buttons) are added at the bottom of <PostsList> and <SinglePostPage>. It's basically a set of counters, the classic todo app of Redux, but this time with multiple counts.
+
+Create the features/posts/ReactionButtons.tsx file.  The post prop will need to be types:
+
+```javascript
+export const ReactionButtons = ({ post }) => {
+```
+
+This means creating an interface to use like this:
+
+```javascript
+import { Post } from "./Post";
+
+interface Props {
+    post: Post;
+}
+
+export const ReactionButtons = ({ post }: Props) => {
+```
+
+Next, there is an error because we don't have the reactions field on the Post interface yet.
+
+```javascript
+{emoji} {post.reactions[name]}
+```
+
+The error is: Property 'reactions' does not exist on type 'Post'.ts(2339)
+
+Add that to the list of things to do:
+
+- add reactions field on the Post interface
+- update the initialState post objects in the slice
+- add reactions to the postAdded prepare callback function
+- update the unit tests to have the reactions field
+
+First of all, it's not clear how to add reactions to the initial state.
+
+They are just an object of various types:
+
+```javascript
+const reactionEmoji = {
+  thumbsUp: '👍',
+  hooray: '🎉',
+  heart: '❤️',
+  rocket: '🚀',
+  eyes: '👀'
+}
+```
+
+When something is not clear like this, and there is nowhere in the article where the solution is shown, this my friend, is where real learning happens.  We will have to solve this ourselves.  To do that requires internalizing the the problem and actually understanding what the solution is.
+
+Is it OK to put an empty array as a type?
+
+```javascript
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  user: string;
+  date: string;
+  reactions: [];
+}
+```
+
+This seems pretty lax to me.  Are we going to be adding arbitrary reactions?  Then it makes sense.  Why not allow the user to choose what kind of reaction to add, and others can either echo that or add their own.
+
+But the goal here is not to develop our own app, but to implement the provided example app in Typescript.  So I suppose I would accept the code to compile and run with the minimal changes for now.
+
+The typescript error;
+
+```err
+Type '(title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' 
+is not assignable to type '((title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }) & ((...a: never[]) => Omit<{ payload: Post; type: string; }, "type">)'.
+  Type '(title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' is not assignable to type '(...a: never[]) => Omit<{ payload: Post; type: string; }, "type">'.
+    Call signature return types '{ payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' and 'Omit<{ payload: Post; type: string; }, "type">' are incompatible.
+      The types of 'payload.reactions' are incompatible between these types.
+        Type 'never[]' is not assignable to type '[]'.
+          Target allows only 0 element(s) but source may have more.ts(2322)
+postsSlice.ts(42, 7): The expected type comes from property 'prepare' which is declared here on type '{ reducer(state: WritableDraft<Post>[], action: { payload: Post; type: string; }): void; prepare(title: any, content: any, userId: any): { payload: { id: string; ... 4 more ...; reactions: never[]; }; }; } & { ...; }'
+```
+
+When you see this kind of error, it helps at first to reformat it to see what it's actually saying.  Separate the text from the code, and make sure the code is lined up with itself so you can see the differences easily:
+
+```err
+Type 
+'(title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' 
+is not assignable to type 
+'((title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }) & ((...a: never[]) => Omit<{ payload: Post; type: string; }, "type">)'.
+  
+Type 
+'(title: any, content: any, userId: any) => { payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' 
+is not assignable to type 
+'(...a: never[]) => Omit<{ payload: Post; type: string; }, "type">'.
+    
+Call signature return types 
+'{ payload: { id: string; date: string; title: any; content: any; user: any; reactions: never[]; }; }' and 
+'Omit<{ payload: Post; type: string; }, "type">' 
+are incompatible.
+      
+The types of 'payload.reactions' are incompatible between these types.
+Type 'never[]' is not assignable to type '[]'.
+Target allows only 0 element(s) but source may have more.ts(2322)
+postsSlice.ts(42, 7): 
+
+The expected type comes from property 'prepare' which is declared here on type 
+'{ reducer(state: WritableDraft<Post>[], action: { payload: Post; type: string; }): void; prepare(title: any, content: any, userId: any): { payload: { id: string; ... 4 more ...; reactions: never[]; }; }; } & { ...; }'
+```
+
+In this case, my unease with the lax type seems warrented.  But this is a learning exercise, so lets break it down a bit.
+
+```err
+Type 
+'() => { payload: { }' 
+is not assignable to type 
+'(() => { payload: { }; }) & ((...a: never[]) => Omit<{ payload: Post; type: string; }, "type">)'.
+```
+
+As you can see, there is some fundamental issue here.  The simple solution is to use the 'any' cop-out:
+
+```ts
+reactions: any[];
+```
+
+There you go.  The giant error goes away with three letters.  What is the actual emoji type is a bit tricky to define.  But since this is about getting on with it, that can stand for now until there is a better idea.  There is more error fun to come.
+
+In the src\features\posts\ReactionButtons.tsx file, the 'name' property has an error:
+
+```tsx
+<button
+    key={name}
+    type="button"
+    className="muted-button reaction-button"
+>
+    {emoji} {post.reactions[name]}
+</button>
+```
+
+The error is:
+
+```err
+Element implicitly has an 'any' type because index expression is not of type 'number'.ts(7015)
+No quick fixes available
+```
+
+Typescript has a "as keyof" syntax which comes to mind here.  But as  the answer to this StackOverflow questions[Element implicitly has an 'any' type because index expression is not of type 'number' [7015]](https://stackoverflow.com/questions/53526178/element-implicitly-has-an-any-type-because-index-expression-is-not-of-type-nu) points out, *This is happening because you're attempting to index an object with a numeric index signature with string keys.*
+
+The solutions given is: *A way to get this working (a hacky way) would be to cast the indexer to a string*.  For us, this looks like this:
+
+```js
+{emoji} {post.reactions[name as any]}
+```
+
+The only thing left to do then is the fix the test which is breaking the build.
+
+In src\features\posts\postsSlice.spec.ts, add an empty reactions array to each test object:
+
+```js
+const initialState = [
+  {
+      id: "1",
+      title: "First Post!",
+      content: "Hello!",
+      user: "0",
+      date: dateSub10,
+      reactions: [],
+  },
+  ...
+```
+
+Do that for all the objects and the app runs once more.
+
+We still have to import and add the <ReactionButtons post={post} /> in src\features\posts\PostsList.tsx
+
+We also need to update the <ReactionButtons> component to dispatch the reactionAdded action when the user clicks a button.
+
+But this feature is not working.  There are no numbers next to the reaction buttons.  Also, when clicking on a reaction button, we see the following console error:
+
+```err
+errors.ts:49 Uncaught Error: [Immer] Immer only supports setting array indices and the 'length' property
+    at n (errors.ts:49:1)
+```
+
+This is an interesting error.  Actually, I don't see where the error is coming from.  Here is the full stack trace:
+
+```err
+[Immer] Immer only supports setting array indices and the 'length' property
+    at n (errors.ts:49:1)
+    at on.set (proxy.ts:229:1)
+    at reactionAdded (postsSlice.ts:38:1)
+    at createReducer.ts:294:1
+    at produce (immerClass.ts:94:1)
+    at createReducer.ts:293:1
+    at Array.reduce (<anonymous>)
+    at reducer (createReducer.ts:260:1)
+    at reducer (createSlice.ts:372:1)
+    at combination (redux.js:560:1)
+```
+
+Going back to the step 4 tutorial, it is shown in a paragraph that the initial state for the postSlice file should indeed include this:
+
+```js
+reactions: {thumbsUp: 0, hooray: 0, heart: 0, rocket: 0, eyes: 0}
+```
+
+Adding that to the initial state then causes this error:
+
+```err
+Type '{ thumbsUp: number; hooray: number; heart: number; rocket: number; eyes: number; }' is not assignable to type 'any[]'.
+  Object literal may only specify known properties, and 'thumbsUp' does not exist in type 'any[]'.ts(2322)
+```
+
+It turns out the Post interface was using an array instead of an object.  Change it to the 'any' type and everything works:
+
+```js
+reactions: any;
+```
+
+Say we did want to handle this type properly:
+
+```js
+export interface Post {
+    id: string;
+    title: string;
+    content: string;
+    user: string;
+    date: string;
+    reactions: {
+        thumbsUp: number;
+        hooray: number;
+        heart: number;
+        rocket: number;
+        eyes: number;
+    };
+}
+```
+
+Usually a sub-type like that will be a separate interface, possibly in it's own file.  That would look like this if it was in the same file:
+
+```js
+export interface Post {
+    id: string;
+    title: string;
+    content: string;
+    user: string;
+    date: string;
+    reactions: Reaction;
+}
+
+export interface Reaction {
+    thumbsUp: number;
+    hooray: number;
+    heart: number;
+    rocket: number;
+    eyes: number;
+}
+```
+
+But then we get some more interesting errors.  In the posts slice, this line:
+
+```js
+existingPost.reactions[reaction]++
+```
+
+Causes this error:
+
+```err
+Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'WritableDraft<Reaction>'.ts(7053)
+```
+
+Great!  Never heard of WritableDraft before.  Yay, something new to learn!
+
+I read this StackOverflow description:  *Redux Toolkit allows you to either return a new state (type State | WritableDraft<State> at the time of this answer, or type State | Draft<State> in newer versions of RTK) or modify the draft state and not return anything (type void). You get a Typescript error because returning number is neither or these.*
+
+At this point, I'm OK with logging issues like this here and moving on with 'any' as a solution.  The post has grown long, and progress is slow.  At some point real life intrudes on well laid plans.  Priorities need to be considered.  The priority now for me is to get the RTK Query sooner rather than later.  Typescript and unit tests are still priorities, but not as important now as getting to the end of all the steps.
+
+Here we are at the end of step 4.  Step 5 and 6 will finish off this app as far as functionality.  I'm assuming, though I don't know for sure, that step 7 and 8 will only refactor the solution to use RTK Query.  Given the slow speed, it's good to think how long this might take.
+
+This post was started 2022-11-20.  It is now 2023-02-22.  However, during December I was able to spend more time on it.  This wont be the case going forward.  The post starts off at step three, as the first two were the counter example which was done previously.  So that's two steps in three months.  So a month and a half minimum for each step.  I'm not optimistic regarding time I can spend on this, so if we push that to two months a step, we wont be finished for another eight months.  You see the problem.  This is why, at this point, the "any" type will do.
+
+### Testing the reactions
+
+I'm surprised there is only one failure:
+
+```txt
+ FAIL  src/App.test.tsx (5.494 s)
+  ● navigates to the first post and back again
+    TestingLibraryElementError: Unable to find an element with the text: /First Post!/i. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+    ...
+             await user.click(screen.getAllByText(/View Post/i)[0]);
+    > 29 |   expect(screen.getByText(/First Post!/i)).toBeInTheDocument();
+         |                 ^    
+```
+
+If we look instead for (/View Post/i)[1]), the tests pass the first time, then fail the next.
+
+Anyhow, we need at least one test for the the reactions feature.
+
+Going a little deeper into the Redux documentation, I read [this about testing Redux](https://redux.js.org/usage/writing-tests): *Redux code can be treated as an implementation detail of the app, without requiring explicit tests for the Redux code in many circumstances.*
+
+For a discussion on why testing implementation detail is not recommended, check out [one of my other articles on the TDD](https://timothycurchod.com/writings/tdd-react-anagram).  Basically, it's considered not good form to test implementation details.  This is because if you test the inner workings of a function, then it's a barrier to refactoring, and refactoring is a key of an iterative problem solving process.  I go into this problem solving method a bit more in my [RGR Coding Game Getting Started](https://timothycurchod.com/writings/rgr-coding-game-getting-started) article.  Sorry in advance for plugging two of my articles in one paragraph!
+
+There are three other points of guidelines:
+
+1. Prefer writing integration tests with everything working together. For a React app using Redux, render a <Provider> with a real store instance wrapping the components being tested. Interactions with the page being tested should use real Redux logic, with API calls mocked out so app code doesn't have to change, and assert that the UI is updated appropriately.
+2. If needed, use basic unit tests for pure functions such as particularly complex reducers or selectors. However, in many cases, these are just implementation details that are covered by integration tests instead.
+3. Do not try to mock selector functions or the React-Redux hooks! Mocking imports from libraries is fragile, and doesn't give you confidence that your actual app code is working.
+
+Given this details, we would want to write a test for the reducer, not because it's complex, but because we need practice at that so when we do encounter a complex reducer, it's not a new thing.
+
+I'm seriously considering point one and integration tests because on the job now we have started using [Cypress](https://testing-library.com/docs/cypress-testing-library/intro/) for integration testing, and it's coming along pretty well.
+
+For now, I will write a simple reducer test, which can be done in the src\features\posts\postsSlice.spec.ts file.
+
+We know that the initial state has zero for each reaction.  If we dispatch a thumbs up action, and put a one for thumbs up in the existing postUpdatedState array, then they should match.
+
+This is what that would look like:
+
+```js
+  it("increments a reaction", () => {
+      const actual = postsReducer(
+          initialState,
+          reactionAdded({ postId: 0, reaction: "thumbsUp" })
+      );
+      expect(actual).toEqual(postUpdatedState);
+  });
+```
+
+However, now we have more broken tests because other tests rely on comparing the whole state.
+
+```txt
+Test Suites: 2 failed, 1 passed, 3 total
+Tests:       3 failed, 8 passed, 11 total
+```
+
+A simple fix for this would be to add thumbs up value of 1 in the expectedPostAddedState array which is used in the "edit a post" test to compare it to the postUpdatedState array and then there is just one failing test.
+
+The test then however looks for the second post, not the first one.  So I change the thumbs up value of the second post in the postUpdatedState array, but still the test fails.  This whole comparing the entire state is making me very uncomfortable.  There has to be a better way.
+
+For now, I'm going to leave the tests where they are and move on to the next step.  This article is far too long, and given the fundamental issues with unit testing, it will all have to be revisited again.  Probably after a new major version of Redux is released.
+
+## Useful links
+
+Here are some links from the tutorial that I found useful when working on this article.
+
+- [Redux docs: Usage with TypeScript](https://redux.js.org/recipes/usage-with-typescript): Examples of how to use Redux Toolkit, the Redux core, and React Redux with TypeScript
+- [Redux Toolkit docs: TypeScript Quick start](https://redux-toolkit.js.org/tutorials/typescript): shows how to use RTK and the React-Redux hooks API with TypeScript
+- [React+TypeScript Cheatsheet](https://github.com/typescript-cheatsheets/react-typescript-cheatsheet): a comprehensive guide to using React with TypeScript
+- [React + Redux in TypeScript Guide](https://github.com/piotrwitek/react-redux-typescript-guide): extensive information on patterns for using React and Redux with TypeScript
+
 ## Original Readme
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) TS template.
