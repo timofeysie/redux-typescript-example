@@ -4,13 +4,15 @@ import { useAppSelector } from "../../app/hooks";
 import { PostAuthor } from "./PostAuthor";
 import { Post } from "./Post";
 import { ReactionButtons } from "./ReactionButtons";
+import { selectPostById } from "./postsSlice";
+import { RootState } from "../../app/store";
 
 export const SinglePostPage = () => {
    const params = useParams();
-   const postId = params.postId;
+   const postId = params.postId ?? "";
 
-  const post = useAppSelector((state) =>
-    state.posts.find((post: Post) => post.id === postId)
+  const post = useAppSelector((state: RootState) => 
+      selectPostById(state, postId)
   );
 
   if (!post) {

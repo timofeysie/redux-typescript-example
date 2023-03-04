@@ -4,9 +4,10 @@ import { Post } from "./Post";
 import { PostAuthor } from "./PostAuthor";
 import { TimeAgo } from "./TimeAgo";
 import { ReactionButtons } from "./ReactionButtons";
+import { selectAllPosts } from "./postsSlice";
 
 export const PostsList = () => {
-    const posts = useAppSelector((state) => state.posts);
+    const posts = useAppSelector(selectAllPosts);
     const orderedPosts = posts
         .slice()
         .sort((a: Post, b: Post) => b.date.localeCompare(a.date));

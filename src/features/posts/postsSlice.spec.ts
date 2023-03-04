@@ -102,7 +102,7 @@ describe("posts reducer", () => {
   it("increments a reaction", () => {
       const actual = postsReducer(
           initialState,
-          reactionAdded({ postId: 0, reaction: "thumbsUp" })
+          reactionAdded({ postId: "0", reaction: "thumbsUp" })
       );
       expect(actual).toEqual(postUpdatedState);
   });
