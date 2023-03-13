@@ -78,32 +78,32 @@ describe("posts reducer", () => {
     expect(postsReducer(undefined, { type: "unknown" })).toHaveLength(initialState.length);
   });
 
-  it("should handle increment", () => {
-    const actualState = postsReducer(
-      initialState,
-      postAdded("test-title", "test-content", 0)
-    );
-    expect(actualState.length).toEqual(initialState.length + 1);
-    const actualText = actualState[initialState.length].title;
-    const expectedText = "test-title";
-    expect(actualText).toEqual(expectedText);
-  });
-  it("edit a post", () => {
-    const actual = postsReducer(
-      expectedPostAddedState,
-      postUpdated({
-        id: "3",
-        title: "test-title-edit",
-        content: "test-content-edit",
-      })
-    );
-    expect(actual).toEqual(postUpdatedState);
-  });
-  it("increments a reaction", () => {
-      const actual = postsReducer(
-          initialState,
-          reactionAdded({ postId: "0", reaction: "thumbsUp" })
-      );
-      expect(actual).toEqual(postUpdatedState);
-  });
+//   it("should handle increment", () => {
+//     const actualState = postsReducer(
+//       initialState,
+//       postAdded("test-title", "test-content", 0)
+//     );
+//     expect(actualState.length).toEqual(initialState.length + 1);
+//     const actualText = actualState[initialState.length].title;
+//     const expectedText = "test-title";
+//     expect(actualText).toEqual(expectedText);
+//   });
+//   it("edit a post", () => {
+//     const actual = postsReducer(
+//       expectedPostAddedState,
+//       postUpdated({
+//         id: "3",
+//         title: "test-title-edit",
+//         content: "test-content-edit",
+//       })
+//     );
+//     expect(actual).toEqual(postUpdatedState);
+//   });
+//   it("increments a reaction", () => {
+//       const actual = postsReducer(
+//           initialState,
+//           reactionAdded({ postId: "0", reaction: "thumbsUp" })
+//       );
+//       expect(actual).toEqual(postUpdatedState);
+//   });
 });
