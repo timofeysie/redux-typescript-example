@@ -4,10 +4,10 @@ import {
     PayloadAction,
     createAsyncThunk,
 } from "@reduxjs/toolkit";
-import { client } from "../../api/client";
+import axios from "axios";
 import { Post } from "./Post";
-// import { sub } from "date-fns";
 import { RootState } from "../../app/store";
+const API_URL = process.env.REACT_APP_API_URL;
 
 interface InitialState {
     posts: Post[];
@@ -24,7 +24,7 @@ const initialState: InitialState = {
 export const fetchPosts: any = createAsyncThunk(
     "posts/fetchPosts",
     async () => {
-        const response = await client.get("/fakeApi/posts");
+        const response = await axios.get(API_URL+"/posts");
         return response.data;
     }
 );
