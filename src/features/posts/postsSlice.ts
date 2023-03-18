@@ -7,6 +7,7 @@ import {
 import axios from "axios";
 import { Post } from "./Post";
 import { RootState } from "../../app/store";
+
 const API_URL = process.env.REACT_APP_API_URL;
 
 interface InitialState {
