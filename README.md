@@ -2586,6 +2586,645 @@ To fix this we can add a type guard to ensure that postId is not undefined befor
 
 The same thing is done in the EditPostForm component.  Now, nothing has really changed in the app.  Just we have some reusable selectors.  Regarding this, the tutorial says to start an app with no selectors and *add some later when you find yourself looking up the same values in many parts of your application code.*
 
+## Loading State
+
+In [the next step](https://redux.js.org/tutorials/essentials/part-5-async-logic#loading-state-for-requests) the tutorial covers how to track loading states as a single enum value.  It actually shows a code snippet in Typescript for the firs time:
+
+```js
+{
+  status: 'idle' | 'loading' | 'succeeded' | 'failed',
+  error: string | null
+}
+```
+
+In features/posts/postsSlice.js (postsSlice.ts) for us, add the initial state which replaces the current sample data with an empty array:
+
+```js
+const initialState = {
+  posts: [],
+  status: 'idle',
+  error: null
+}
+```
+
+Then we have to make the change to the structure of the state, so instead of the flat state:
+
+```js
+postAdded: {
+  reducer(
+    state,
+    action: PayloadAction<Post>
+  ) {
+    state.push(action.payload);
+  },
+```
+
+We have this:
+
+```js
+postAdded: {
+  reducer(state, action) {
+    state.posts.push(action.payload)
+  },
+```
+
+This should give us now an empty array of posts, but there are errors.  All the post properties such as id, title and content have errors like this:
+
+```txt
+Property 'id' does not exist on type 'never'.ts(2339)
+```
+
+This is because now our initial state is not typed anymore.  Before, we had this:
+
+```js
+const initialState: Post[] = [ ... ]
+```
+
+Because there was only an array of posts on the state.  Now that our state has an array of posts, a status and an error, we will need a new interface for this.
+
+To make these errors go away, we can use the hint given earlier about the loading state enum and create an interface:
+
+```js
+interface InitialState {
+    posts: Post [];
+    status: 'idle' | 'loading' | 'succeeded' | 'failed',
+    error: string | null
+}
+```
+
+We can use it like this:
+
+```js
+const initialState: InitialState = {
+    posts: [],
+    status: "idle",
+    error: null,
+};
+```
+
+### Testing the implementation
+
+If you have followed along from the counter example along to the creation of this app, you will know that I have created unit tests in Jest for each step.  Once upon a time I was a Java developer smitten with XP (extreme programming) which uses TDD (test driven development) as a method to create features.  However, there are a number of issues with this.
+
+Currently the tests are breaking because the implementation has changed.  It might be great to have coverage of all the features, but no one wants to maintain old tests.  It might make sense to practice TDD when developing some complex business logic, but after it's working, those tests become a liability.
+
+If coverage of features is what is needed, integration and end-to-end testing is the way to go.  If we had tested just adding a post, and that the post appears on the list, then that test wouldn't be failing now that the internal structure of the store is changing.
+
+Of course, my goal was just to get more practice at writing tests, so no harm done.  I want to practice unit testing for TDD, but a tutorial is not TDD.  But to practice TDD in the wild, you need to know how to test all kinds of things.  So that practice has to come from somewhere.
+
+I'm just bringing this up because I'm not going to be commenting out failing unit tests for now and implementing Cypress for testing soon.
+
+## [Fetching Data with createAsyncThunk](https://redux.js.org/tutorials/essentials/part-5-async-logic#fetching-data-with-createasyncthunk)
+
+The new Thunk added looks like this:
+
+```js
+export const fetchPosts = createAsyncThunk('posts/fetchPosts', async () => {
+  const response = await client.get('/fakeApi/posts')
+  return response.data
+})
+```
+
+The createAsyncThunk function automatically dispatch loading state actions actions.  That's great!
+
+The first argument is the prefix for the generated action types.
+
+It's a Promise based response, but the API docs really show this:
+
+```js
+createAsyncThunk<any, void>(typePrefix: string, payloadCreator: AsyncThunkPayloadCreator<any, void, AsyncThunkConfig>, options?: AsyncThunkOptions<void, AsyncThunkConfig> | undefined): AsyncThunk<...> (+1 overload)
+```
+
+I have to trust the description of what is going on within this magic.
+
+*We typically write (an AJAX Promise) using the JS async/await syntax, which lets us write functions that use Promises while using standard try/catch logic instead of somePromise.then() chains.*
+
+I have to say I like Promises.  Coming from Angular where we were expected to use RxJs for everything I thought overcomplicated things.  It's nice to know that now Angular has ditched RxJs for Signals which are a kind hook, or so I've heard.
+
+In the dispatch action, we have an Typescript error to deal with:
+
+```js
+    useEffect(() => {
+        if (postStatus === "idle") {
+            dispatch(fetchPosts());
+        }
+    }, [postStatus, dispatch]);
+```
+
+The fetchPosts() function shows this:
+
+```txt
+Argument of type 'AsyncThunkAction<any, void, AsyncThunkConfig>' is not assignable to parameter of type 'AnyAction'.ts(2345)
+```
+
+This is because the return type is not clear.  The easy way out is to use the evil *any*.
+
+```js
+export const fetchPosts: any = createAsyncThunk("posts/fetchPosts", async () => {
+```
+
+I'm not proud of this, but just trying to get this series done at this point, so corners need to be cut.
+
+## Reducers and Loading Actions
+
+The next step, [Reducers and Loading Actions](https://redux.js.org/tutorials/essentials/part-5-async-logic#reducers-and-loading-actions) is to handle these actions in the reducers.
+
+The createSlice function creates our actions, and has an "extraReducers" functional argument that receives a "builder" parameter to handle async thunk actions.
+
+Adding an action there looks like this:
+
+```js
+const postsSlice = createSlice({
+  name: 'posts',
+  initialState,
+  reducers: {
+    // omit existing reducers here
+  },
+  extraReducers(builder) {
+    builder
+      .addCase(fetchPosts.pending, (state, action) => {
+        state.status = 'loading'
+      })
+      .addCase(fetchPosts.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        // Add any fetched posts to the array
+        state.posts = state.posts.concat(action.payload)
+      })
+      .addCase(fetchPosts.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.error.message
+      })
+  }
+})
+```
+
+I don't thing we need any Typescript-specific changes here.
+
+Next up, we [display the loading states](https://redux.js.org/tutorials/essentials/part-5-async-logic#reducers-and-loading-actions) in the UI.
+
+There is already a spinner component in the '../../components/Spinner' file.  We import that into the posts list component.
+
+The tutorial shows adding a PostExcerpt that should really be in a separate file, but in this case it's a separate component which would make it easy to extract later:
+
+```js
+const PostExcerpt = ({ post }) => {
+  return (
+    <article className="post-excerpt">
+      <h3>{post.title}</h3>
+      <div>
+        <PostAuthor userId={post.user} />
+        <TimeAgo timestamp={post.date} />
+      </div>
+      <p className="post-content">{post.content.substring(0, 100)}</p>
+
+      <ReactionButtons post={post} />
+      <Link to={`/posts/${post.id}`} className="button muted-button">
+        View Post
+      </Link>
+    </article>
+  )
+}
+```
+
+The post prop has an error: ```Binding element 'post' implicitly has an 'any' type.ts(7031)```
+
+We need an interface for the props to fix this.  We can use the same interface that was created for the reaction buttons from the [last article](https://timothycurchod.com/writings/redux-essentials-app-in-typescript):
+
+```js
+interface Props {
+    post: Post;
+}
+```
+
+It's then used like this:
+
+```js
+const PostExcerpt = ({ post }: Props) => {
+```
+
+Both of these should ideally be in separate files.  But that can happen later during a refactor round.
+
+Inside the PostsList functional component we create an error selector to use.
+
+```js
+  const error = useSelector(state => state.posts.error)
+```
+
+We need to add the state: RootState type as usual to that:
+
+```js
+  const error = useSelector(state: RootState => state.posts.error)
+```
+
+After implementing the error state and content in the posts list like this:
+
+```js
+export const PostsList = () => {
+    const dispatch = useDispatch();
+
+    const posts = useAppSelector(selectAllPosts);
+    const orderedPosts = posts
+        .slice()
+        .sort((a: Post, b: Post) => b.date.localeCompare(a.date));
+
+    const postStatus = useSelector((state: RootState) => state.posts.status);
+    const error = useSelector((state: RootState) => state.posts.error);
+
+    useEffect(() => {
+        if (postStatus === "idle") {
+            dispatch(fetchPosts());
+        }
+    }, [postStatus, dispatch]);
+
+    let content;
+
+    if (postStatus === "loading") {
+        content = <Spinner text="Loading..." />;
+    } else if (postStatus === "succeeded") {
+        // Sort posts in reverse chronological order by datetime string
+        const orderedPosts = posts
+            .slice()
+            .sort((a, b) => b.date.localeCompare(a.date));
+
+        content = orderedPosts.map((post) => (
+            <PostExcerpt key={post.id} post={post} />
+        ));
+    } else if (postStatus === "failed") {
+        content = <div>{error}</div>;
+    }
+
+    const renderedPosts = orderedPosts.map((post: Post) => {
+        return (
+            <article className="post-excerpt" key={post.id}>
+                <h3>{post.title}</h3>
+                <div>
+                    <PostAuthor userId={post.user} />
+                    <TimeAgo timestamp={post.date} />
+                </div>
+                <p className="post-content">{post.content.substring(0, 100)}</p>
+                <ReactionButtons post={post} />
+                <Link to={`/posts/${post.id}`} className="button muted-button">
+                    View Post
+                </Link>
+            </article>
+        );
+    });
+
+    return (
+        <section className="posts-list">
+            <h2 data-testid="post-list-title">Posts</h2>
+            <h2>Posts</h2>
+            {content}
+        </section>
+    );
+};
+```
+
+### Fetching error
+
+After the changes for this section there is an error from the fetch when running the app:
+
+```Unexpected token '<', "<!DOCTYPE "... is not valid JSON```
+
+In the network tab, headers sections it shows:
+
+```err
+Request URL: http://localhost:3000/fakeApi/posts
+Request Method: GET
+Status Code: 304 Not Modified
+Preview: You need to enable JavaScript to run this app.
+```
+
+This is a new error for me.  I didn't have an issue like this when I went through with the vanilla Javascript code.  Why would the Typescript version cause this kind of error?  Maybe something is not being transpiled?
+
+There are plenty of StackOverflow hits for this kind of error, such as [this](https://stackoverflow.com/questions/50286927/i-am-getting-error-in-console-you-need-to-enable-javascript-to-run-this-app-r) which recommends putting this in the package.json: ```"proxy": "http://localhost:3000",```.  But then the error is slightly different.
+
+```err
+Request URL: http://localhost:3000/fakeApi/posts
+Request Method: GET
+Status Code: 431 Request Header Fields Too Large
+```
+
+What we should get, as seen in the [live demo here](https://codesandbox.io/s/github/reduxjs/redux-essentials-example-app/tree/checkpoint-3-postRequests/?from-embed) is an array of posts like this:
+
+```json
+{
+    "id": "Z9SIaQsvAdrzwvf5UlNLj",
+    "title": "soluta facere neque",
+    "date": "2023-03-09T00:27:20.943Z",
+    "content": "Sequi sint molestias hic ad iure ... voluptatem qui.",
+    "reactions": {
+        "id": "LTo_Sq0uInSqw2ivYOgtT",
+        "thumbsUp": 0,
+        "hooray": 0,
+        "heart": 0,
+        "rocket": 0,
+        "eyes": 0
+    },
+    "user": "4E5O6cJXWu5jma1QV50Z-"
+}
+```
+
+It's time to consider that the fake api which is written in Javascript might not be working in our Typescript setting.
+
+Check out this file: ```src\api\server.js```
+
+Changing that file extension to .ts reveals a nightmare of problems, starting with the first line such as:
+
+```js
+import { rest, setupWorker } from 'msw'
+```
+
+This would involve installing the types for this package.  That would be done like this:
+
+```shell
+npm install @types/msw
+```
+
+However, there are a huge number of errors in that file.  It could take a while to fix them, and some of them might be pretty tricky.  Is there a way to leave those .js file as is?
+
+An answer on [this StackOverflow question](https://stackoverflow.com/questions/74766575/how-to-use-plain-javascript-react-component-in-a-typescript-react-project) says to put this in the tsconfig.json file: ```allowJs: true```.
+
+Status Code: 431 Request Header Fields Too Large
+
+It would be nice to have a simple solution like this, but it doesn't work.
+
+Another thing I thought of would be to create a vanilla node.js app to run the server and client.
+
+It would also have been nice if I had thought about this problem before I started this whole Typescript conversion project.
+
+Just trying the above npm command results in:
+
+```shell
+npm ERR! code E404
+npm ERR! 404 Not Found - GET https://registry.npmjs.org/@types%2fmsw - Not found
+```
+
+I'm not going to lie, this is a big unexpected problem.
+
+These are APIs the app depends on:
+
+```txt
+/fakeApi/posts GET
+/fakeApi/posts POST
+/fakeApi/posts/:postId GET
+/fakeApi/posts/:postId PATCH
+/fakeApi/posts/:postId/comments GET
+/fakeApi/posts/:postId/reactions POST
+/fakeApi/notifications GET
+/fakeApi/users GET
+```
+
+Quite a bit of work there no matter what we do.
+
+The thing is, this is all about async data fetching with Typescript.  I *could* create a simple [Next.js](https://docs.nestjs.com/) backend for this app pretty easily.
+
+I have an old Node.js app that I would like to upgrade, so it's not a bad idea getting some practice in for that.
+
+I'm also interested in [MACH architecture](https://devops.com/introduction-to-mach-architecture/), which means a cloud based db solution like a hosted database.
+
+FYI, MACH stands for:
+
+- Microservices
+- API-first
+- Cloud-native
+- Headless
+
+It's pretty vague, and I'm wondering if Nest.js and say a Mongo db deployed on some free cloud services fits in with MACH.  We have our API, and just want CRUD functions to support it.
+
+Since we're in to Typescript here, it's not a bad idea.  [Nest](https://docs.nestjs.com/techniques/database) *uses TypeORM because it's the most mature Object Relational Mapper (ORM) available for TypeScript. Since it's written in TypeScript, it integrates well with the Nest framework.*
+
+So as it is the options for going forward with this article then would be:
+
+1. Use .js files in a .ts project.
+2. Convert server.js and client.ts to .ts.
+3. Recreate the APIs in a Node.js backend.
+4. End things here.
+5. Raise an issue on the [Redux GitHub](https://github.com/reduxjs/redux-essentials-example-app/issues) and see if they have any ideas.
+
+To start I have [raised an issue here](https://github.com/reduxjs/redux-essentials-example-app/issues/51) so stay tuned to see what happens there.
+
+It was very nice for the maintainer [Mark Erikson](https://github.com/markerikson) to reply regarding the client fakeApi issue, as well as possible plans for a Typescript version:
+
+*I actually did recently make the decision to convert the entire "Essentials" tutorial to be TS-first.  However, I don't yet have any idea when I'll be able to spend the time to do that :) I am kinda confused on the request error you're describing. That doesn't seem anything that would be related to TS at all - that's some kind of a request/URL mismatch.*
+
+In the meantime, I decided to bite the bullet, go with option #3 and create my own Typescript backend which can be used with the project.  Since I would eventually like to deploy the app after some changes, it can be used later for that.
+
+[Here is the repo](https://github.com/timofeysie/flash) and I will be creating another article about how to implement all the API calls with that when they are done.
+
+Now we can move on to the next part.
+
+## [Loading Users](https://redux.js.org/tutorials/essentials/part-5-async-logic#loading-users)
+
+The next step involves fixing the fact that the posts all have "Unknown author" instead of the user name.  To fix this the app needs to fetch the users on application start.
+
+This also means that for the backend app the CRUD endpoints for a users API will have to be scaffolded.  Using Nestjs with TypeORM makes that super easy.
+
+Adding a user interface and using fetchUsers with createAsyncThunk as well as adding that action to the extraReducers to mutate the state looks like this:
+
+```js
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { client } from "../../api/client";
+import { User } from './User';
+
+const initialState: User [] = [];
+
+export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
+    const response = await client.get("/fakeApi/users");
+    return response.data;
+});
+
+const usersSlice = createSlice({
+    name: "users",
+    initialState,
+    reducers: {},
+    extraReducers(builder) {
+        builder.addCase(fetchUsers.fulfilled, (state, action) => {
+            return action.payload;
+        });
+    },
+});
+
+export default usersSlice.reducer;
+```
+
+The builder returns the action.payload directly thanks to Immer which has two possibilities here:
+
+A. mutate the existing state value (which here was an empty array)
+B. return a new result (replace the existing state completely)
+
+If we return a new value, that will replace the existing state completely with whatever we return. (Note that if you want to manually return a new value, it's up to you to write any immutable update logic that might be needed.)
+
+The tutorial points out we could use ```state.push(...action.payload)``` to mutate but here we want to replace the users with the server response.
+
+Then, in the src\index.tsx we import that action at dispatch it there.
+
+### Scaffolding the users CRUD API
+
+With the Nestjs CLI, it's as easy as this:
+
+```txt
+> nest generate resource
+? What name would you like to use for this resource (plural, e.g., "users")? users
+? What transport layer do you use? REST API
+? Would you like to generate CRUD entry points? Yes
+CREATE src/users/users.controller.ts (894 bytes)
+CREATE src/users/users.controller.spec.ts (566 bytes)
+CREATE src/users/users.module.ts (247 bytes)
+CREATE src/users/users.service.ts (609 bytes)
+CREATE src/users/users.service.spec.ts (453 bytes)
+CREATE src/users/dto/create-user.dto.ts (30 bytes)
+CREATE src/users/dto/update-user.dto.ts (169 bytes)
+CREATE src/users/entities/user.entity.ts (21 bytes)
+UPDATE src/app.module.ts (1122 bytes)
+```
+
+Then we need to edit these four files:
+
+1. posts.entity.ts
+2. posts.module.ts
+3. posts.service.ts
+4. posts.controller.ts
+
+The user interface is super simple:
+
+```js
+export interface User {
+  id: any;
+  name: string;
+}
+```
+
+The entity file looks like this:
+
+```js
+@Entity()
+export class User {
+  @ObjectIdColumn()
+  id: ObjectID;
+
+  @Column()
+  name: string;
+}
+```
+
+The ObjectIdColumn decorator will create an ID for us, so that doesn't have to be in the POST to create a user.
+
+Next the entity is imported into the user module.  It can't get any more Angular than this (Angular may well yet survive on the server):
+
+```js
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  ...
+})
+```
+
+The service provides the CRUD framework:
+
+```js
+@Injectable()
+export class UsersService {
+  constructor(
+    @InjectRepository(User)
+    private usersRepository: MongoRepository<User>,
+  ) {}
+
+  create(createUserDto: CreateUserDto) {
+    return this.usersRepository.save(createUserDto);
+  }
+
+  findAll() {
+    return this.usersRepository.find();
+  }
+
+  findOne(id: any) {
+    return this.usersRepository.findOne(id);
+  }
+
+  update(id: any, updateUserDto: UpdateUserDto) {
+    return this.usersRepository.update(id, updateUserDto);
+  }
+
+  remove(id: any) {
+    return this.usersRepository.delete(id);
+  }
+}
+```
+
+Again with the Angular.  If you think classes are gross, this option may not be for you.
+
+A note on [decorators](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#decorators), these have actually just been added to TypeScript 5, so not a bad thing getting used to them if you're interested in Typescript.
+
+The controller doesn't really need to be modified much at all.  Mainly the ids might be a combination of numbers and letters, so we do this:
+
+```js
+  @Get(':id')
+  findOne(@Param('id') id: any) {
+    return this.usersService.findOne(id);
+  }
+```
+
+Then Bob is a close family relative.  With [Northflank](https://northflank.com/), we just make a commit and push to the master branch and create some Postman test calls to check it once the build is done.
+
+A little house keeping such as adding some users, deleting the old posts with random ids, adding new posts with actual ids, and then we can test out the user fetch.  It all looks good, and again, Bob is part of the family.  Of course, there is a lot of magic going on behind the scenes here.  If you run into problems, well, no one knows Bob and your on your own.  That's why sometimes boilerplate code some sometimes be a good thing.
+
+## [Adding New Posts](https://redux.js.org/tutorials/essentials/part-5-async-logic#loading-users)
+
+make an API call that will create the new post
+
+we send a request body like { title, content, user: userId }
+
+the server will generate an IDs date and return the completed post.
+
+```js
+export const addNewPost = createAsyncThunk(
+    "posts/addNewPost",
+    // The payload creator receives the partial `{title, content, user}` object
+    async (initialPost) => {
+        // We send the initial data to the fake API server
+        const response = await axios.get(API_URL+"/posts", initialPost);
+        // The response includes the complete post object, including unique ID
+        return response.data;
+    }
+);
+```
+
+The initialPost arg causes this error: ```Argument of type 'void' is not assignable to parameter of type 'AxiosRequestConfig<any> | undefined'.ts(2345)```
+
+The type for the dispatch looks like this:
+
+```js
+createAsyncThunk<any, void>(typePrefix: string, payloadCreator: AsyncThunkPayloadCreator<any, void, AsyncThunkConfig>, options?: AsyncThunkOptions<void, AsyncThunkConfig> | undefined): AsyncThunk<...> (+1 overload)
+```
+
+```js
+  await dispatch(
+      addNewPost({ title, content, user: userId })
+  ).unwrap();
+```
+
+Argument of type 'AsyncThunkAction<any, any, AsyncThunkConfig>' is not assignable to parameter of type 'AnyAction'.ts(2345)
+
+We already have a ThunkAction which can be used to type the dispatch like this in the store.ts file:
+
+```js
+export type AppDispatch = typeof store.dispatch;
+```
+
+It's used like this:
+
+```js
+import { ThunkAction } from "redux-thunk";
+...
+const dispatch = useDispatch<AppDispatch>();
+```
+
+There is good discussion on the official [Type Checking Redux Thunks](https://redux.js.org/usage/usage-with-typescript#type-checking-redux-thunks) guide with a more in-depth solution shown.
+
 ## Useful links
 
 Here are some links from the tutorial that I found useful when working on this article.
