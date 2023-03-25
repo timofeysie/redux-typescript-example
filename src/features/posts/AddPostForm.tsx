@@ -47,40 +47,40 @@ export const AddPostForm = () => {
   ));
   
   return (
-    <section className="posts-list">
-      <h2>Add a New Post</h2>
-      <form className="post-excerpt form-container">
-        <label htmlFor="postTitle">Post Title:</label>
-        <input
-          type="text"
-          id="postTitle"
-          name="postTitle"
-          value={title}
-          onChange={onTitleChanged}
-          className="form-input"
-        />
-        <label htmlFor="postAuthor">Author:</label>
-        <select id="postAuthor" value={userId} onChange={onAuthorChanged}>
-          <option value=""></option>
-          {usersOptions}
-        </select>
-        <label htmlFor="postContent">Content:</label>
-        <textarea
-          id="postContent"
-          name="postContent"
-          value={content}
-          onChange={onContentChanged}
-          className="form-input"
-        />
-        <button
-          type="button"
-          onClick={onSavePostClicked}
-          disabled={!canSave}
-          className="button muted-button"
-        >
-          Save Post
-        </button>
-      </form>
-    </section>
+      <section className="add-new-post">
+          <h2>Add a New Post</h2>
+          <form className="post-excerpt form-container">
+              <label htmlFor="postTitle">Post Title:</label>
+              <input
+                  type="text"
+                  id="postTitle"
+                  name="postTitle"
+                  value={title}
+                  onChange={onTitleChanged}
+                  className="form-input"
+              />
+              <label htmlFor="postAuthor">Author:</label>
+              <select id="postAuthor" value={userId} onChange={onAuthorChanged}>
+                  <option value=""></option>
+                  {usersOptions}
+              </select>
+              <label htmlFor="postContent">Content:</label>
+              <textarea
+                  id="postContent"
+                  name="postContent"
+                  value={content}
+                  onChange={onContentChanged}
+                  className="form-input"
+              />
+              <button
+                  type="button"
+                  onClick={onSavePostClicked}
+                  disabled={!canSave}
+                  className="button muted-button"
+              >
+                  Save Post
+              </button>
+          </form>
+      </section>
   );
 };
