@@ -22,10 +22,27 @@ const initialState: InitialState = {
     error: null,
 };
 
+interface InitialPost {
+    title: string;
+    content: string;
+    user: any;
+}
+
 export const fetchPosts: any = createAsyncThunk(
     "posts/fetchPosts",
     async () => {
         const response = await axios.get(API_URL+"/posts");
+        return response.data;
+    }
+);
+
+export const addNewPost = createAsyncThunk(
+    "posts/addNewPost",
+    // The payload creator receives the partial `{title, content, user}` object
+    async (initialPost: any) => {
+        // We send the initial data to the fake API server
+        const response = await axios.post(API_URL + "/posts", initialPost);
+        // The response includes the complete post object, including unique ID
         return response.data;
     }
 );
@@ -86,6 +103,10 @@ const postsSlice = createSlice({
             .addCase(fetchPosts.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.error.message;
+            })
+            .addCase(addNewPost.fulfilled, (state, action) => {
+                // We can directly add the new post object to our posts array
+                state.posts.push(action.payload);
             });
     },
 });

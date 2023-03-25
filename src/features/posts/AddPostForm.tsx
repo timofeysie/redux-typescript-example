@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import type { RootState } from "../../app/store";
 import { useDispatch, useSelector } from "react-redux";
-import { postAdded } from "./postsSlice";
+import { addNewPost } from "./postsSlice";
+import { AppDispatch } from "../../app/store"
 
 export const AddPostForm = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const users = useSelector((state: RootState) => state.users);
+  const [addRequestStatus, setAddRequestStatus] = useState("idle");
 
   const onTitleChanged = (e: React.FormEvent<HTMLInputElement>) =>
     setTitle((e.target as HTMLInputElement).value);
@@ -17,16 +19,26 @@ export const AddPostForm = () => {
   const onAuthorChanged = (e: React.FormEvent<HTMLSelectElement>) =>
     setUserId((e.target as HTMLInputElement).value);
 
-  const onSavePostClicked = () => {
-    if (title && content) {
-      dispatch(postAdded(title, content, userId));
+  const canSave =
+      [title, content, userId].every(Boolean) && addRequestStatus === "idle";
 
-      setTitle("");
-      setContent("");
-    }
+  const onSavePostClicked = async () => {
+      if (canSave) {
+          try {
+              setAddRequestStatus("pending");
+              await dispatch(
+                  addNewPost({ title, content, user: userId })
+              ).unwrap();
+              setTitle("");
+              setContent("");
+              setUserId("");
+          } catch (err) {
+              console.error("Failed to create project: ", err);
+          } finally {
+              setAddRequestStatus("idle");
+          }
+      }
   };
-
-  const canSave = Boolean(title) && Boolean(content) && Boolean(userId);
 
   const usersOptions = users.map((user) => (
     <option key={user.id} value={user.id}>
