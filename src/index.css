@@ -41,7 +41,7 @@ nav a,
 nav a:active {
   font-weight: 700;
   padding: 0.25rem 1.5rem;
-  border-radius: 4px;
+  border-radius: 4px 4px 0 0;
   color: white !important;
   background: #481499;
 }

@@ -3225,6 +3225,132 @@ const dispatch = useDispatch<AppDispatch>();
 
 There is good discussion on the official [Type Checking Redux Thunks](https://redux.js.org/usage/usage-with-typescript#type-checking-redux-thunks) guide with a more in-depth solution shown.
 
+This will wrap up part five.  You can find all the code in the example app [repo part-5-async-login-and-data-fetching branch](https://github.com/timofeysie/redux-typescript-example/tree/part-5-async-login-and-data-fetching).
+
+## Part 6: Performance and Normalizing Data
+
+Despite the title of this article being for part 5, I think it's easier to continue with part six here rather than start with a new article.  Honestly, the rug has been pulled out from under this project by the React teams new documentation which is now not recommending using create-react-app anymore, which is how this project was started.  This means that the Redux team will have to follow suit and update their documentation to account for this, meaning the days are numbered for this project as a demonstration of best practices.
+
+In this section, [Redux Essentials, Part 6: Performance and Normalizing Data](https://redux.js.org/tutorials/essentials/part-6-performance-normalization), we will be covering the following.
+
+- Memoize selector functions to optimize performance
+- Optimize React component rendering with Redux
+- Normalization (no duplication of data) state structure, and keeping items stored in a lookup table by item ID
+- createEntityAdapter API helps manage normalized data in a slice
+
+Feature-wise, this will include:
+
+1. add a page to show the list of all users
+2. add a page to show all posts by a specific user.
+3. notifications to send a message, leave a comment, or reacted to a posts
+
+If you want to see the finished project (in Javascript not Typescript), you can [open the official repo in a code sandbox here](https://codesandbox.io/s/github/reduxjs/redux-essentials-example-app/tree/checkpoint-4-entitySlices/?from-embed).
+
+### [Adding User Pages](https://redux.js.org/tutorials/essentials/part-6-performance-normalization#adding-user-pages)
+
+Here a new <UsersList> component is added to the user feature.
+
+- features/users/UsersList.js -> features/users/UsersList.tsx
+
+If you are wondering why we don't use the ".ts" file extension, try that out and you would see errors like this on ending tags: ```Unterminated regular expression literal.ts(1161)```
+
+To support the user list component, we add some selectors.  This will require typing with the root state:
+
+```js
+import { RootState } from "../../app/store";
+...
+export const selectAllUsers = (state: RootState) => state.users;
+```
+
+- features/users/UserPage.js -> UserPage.tsx
+
+Some usual issues here with the props and state:
+
+```js
+export const UserPage = ({ match }) => {
+    const { userId } = match.params;
+
+    const user = useSelector((state) => selectUserById(state, userId));
+
+    const postsForUser = useSelector((state) => {
+        const allPosts = selectAllPosts(state);
+```
+
+The TS error on match is: ```Binding element 'match' implicitly has an 'any' type.ts(7031)```
+
+When you see this kind of error on a component prop, you know that you will need an interface for it.  I'm not sure about the match type at this point, so will start of with the ominous ```any```:
+
+```js
+interface UserPageProps {
+    match: any | undefined;
+}
+
+export const UserPage = ({ match }: UserPageProps) => { ... }
+```
+
+Next, the state variables have this error: ```(parameter) state: unknown - Argument of type 'unknown' is not assignable to parameter of type '{ counter: CounterState; posts: InitialState; users: User[]; }'.ts(2345)```
+
+That is also solved by importing and using the root state type:
+
+```js
+    const user = useSelector((state: RootState) => selectUserById(state, userId));
+
+    const postsForUser = useSelector((state: RootState) => { ... })
+```
+
+One last issue is that user has this error: ```const user: User | undefined - 'user' is possibly 'undefined'.ts(18048)```
+
+```html
+<h2>{user.name}</h2>
+```
+
+We can fix that with [optional chaining](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining).
+
+Next, the routes need to be added.  Here is the react-router-dom version 5 code shown:
+
+```js
+<Route exact path="/users" component={UsersList} />
+<Route exact path="/users/:userId" component={UserPage} />
+```
+
+Here is what we need for version 6:
+
+```js
+<Route path="/users" element={<UsersList />} />
+<Route path="/users/:userId" element={<UserPage />} />
+```
+
+However, there is still an error on the user page: ```Property 'match' is missing in type '{}' but required in type 'UserPageProps'.ts(2741)
+UserPage.tsx(10, 5): 'match' is declared here.```
+
+One solution to this would be to make the match prop optional in the interface like this:
+
+```js
+interface UserPageProps {
+    match?: any | undefined;
+}
+```
+
+The users list works, but the user detail page has this error:
+
+```err
+UserPage.tsx:14 Uncaught TypeError: Cannot read properties of undefined (reading 'params')
+    at UserPage (UserPage.tsx:14:1)
+    at renderWithHooks (react-dom.development.js:16305:1)
+```
+
+I've forgotten that also with the change of the links in the React DOM router, there are changes to how the parameters are handled.  Similar to what was done in the SinglePostPage.tsx component, we can remove our props interface and use the useParams hook like this:
+
+```js
+export const UserPage = () => {
+  const params = useParams();
+  const userId = params.userId ?? "";
+```
+
+And then both new pages work.
+
+Next up, [Adding Notifications](https://redux.js.org/tutorials/essentials/part-6-performance-normalization#adding-notifications).
+
 ## Useful links
 
 Here are some links from the tutorial that I found useful when working on this article.

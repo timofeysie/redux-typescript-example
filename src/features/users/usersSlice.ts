@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { client } from "../../api/client";
 import { User } from './User';
+import { RootState } from "../../app/store";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -23,3 +24,8 @@ const usersSlice = createSlice({
 });
 
 export default usersSlice.reducer;
+
+export const selectAllUsers = (state: RootState) => state.users;
+
+export const selectUserById = (state: RootState, userId: any) =>
+    state.users.find((user) => user.id === userId);

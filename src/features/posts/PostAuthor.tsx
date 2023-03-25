@@ -11,5 +11,5 @@ export const PostAuthor = ({ userId }: PostAuthorProps) => {
     state.users.find((user) => user.id === userId)
   );
 
-  return <span>by {author ? author.name : "Unknown author"}</span>;
+  return <span>by {author ? author.name : "Unknown author"}&nbsp;</span>;
 };
