@@ -1,11 +1,27 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-
 import { client } from "../../api/client";
+import { RootState } from "../../app/store";
+
+interface Notification {
+    id: any;
+    date: string;
+    message: string;
+}
+
+export type AsyncThunkConfig = {
+    state: RootState;
+    rejectValue: {
+        error: Error;
+    };
+    extra: {
+        jwt: string;
+    };
+};
 
 export const fetchNotifications = createAsyncThunk(
     "notifications/fetchNotifications",
     async (_, { getState }) => {
-        const allNotifications = selectAllNotifications(getState());
+        const allNotifications = (getState() as RootState).notifications;
         const [latestNotification] = allNotifications;
         const latestTimestamp = latestNotification
             ? latestNotification.date
@@ -19,7 +35,7 @@ export const fetchNotifications = createAsyncThunk(
 
 const notificationsSlice = createSlice({
     name: "notifications",
-    initialState: [],
+    initialState: [] as Notification[],
     reducers: {},
     extraReducers(builder) {
         builder.addCase(fetchNotifications.fulfilled, (state, action) => {
@@ -32,4 +48,4 @@ const notificationsSlice = createSlice({
 
 export default notificationsSlice.reducer;
 
-export const selectAllNotifications = (state) => state.notifications;
+export const selectAllNotifications = (state: RootState) => state.notifications;
