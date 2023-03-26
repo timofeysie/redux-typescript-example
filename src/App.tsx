@@ -8,6 +8,7 @@ import { SinglePostPage } from "./features/posts/SinglePostPage";
 import { EditPostForm } from "./features/posts/EditPostForm"
 import { UsersList } from "./features/users/UsersList"
 import { UserPage } from "./features/users/UserPage"
+import { NotificationsList } from "./features/notifications/NotificationsList"
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                   <Route path="/editPost/:postId" element={<EditPostForm />} />
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/users/:userId" element={<UserPage />} />
+                  <Route path="/notifications" element={<NotificationsList />} />
               </Routes>
           </div>
       </>
