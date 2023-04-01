@@ -3225,6 +3225,18 @@ const dispatch = useDispatch<AppDispatch>();
 
 There is good discussion on the official [Type Checking Redux Thunks](https://redux.js.org/usage/usage-with-typescript#type-checking-redux-thunks) guide with a more in-depth solution shown.
 
+## Option Number 2
+
+Another choice that might be more suitable to many, is the option 2 mentioned above: Convert server.js and client.ts to .ts.
+
+User [dmitrybv](https://github.com/dmitrybv) raised this [issue](https://github.com/timofeysie/redux-typescript-example/issues/4) on the Github repo, and eventually forked the project and converted the client and server files to Typescript.  I have included the work here as an option.  To use the fakeApi again with this app you would need to create a .env file with the following:
+
+```txt
+REACT_APP_API_URL=fakeApi
+```
+
+Then when you run the app, it should use the example backend once again.
+
 ## Useful links
 
 Here are some links from the tutorial that I found useful when working on this article.
