@@ -6,6 +6,8 @@ const API_URL = process.env.REACT_APP_API_URL;
 
 interface Notification {
     id: any;
+    read: boolean;
+    isNew: boolean;
     user: string;
     date: string;
     message: string;
@@ -39,10 +41,20 @@ export const fetchNotifications = createAsyncThunk(
 const notificationsSlice = createSlice({
     name: "notifications",
     initialState: [] as Notification[],
-    reducers: {},
+    reducers: {
+        allNotificationsRead(state, action) {
+            state.forEach((notification: Notification) => {
+                notification.read = true;
+            });
+        },
+    },
     extraReducers(builder) {
         builder.addCase(fetchNotifications.fulfilled, (state, action) => {
             state.push(...action.payload);
+            state.forEach((notification) => {
+                // Any notifications we've read are no longer new
+                notification.isNew = !notification.read;
+            });
             // Sort with newest first
             state.sort((a, b) => b.date.localeCompare(a.date));
         });
