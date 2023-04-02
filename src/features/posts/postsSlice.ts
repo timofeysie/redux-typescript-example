@@ -3,6 +3,7 @@ import {
     nanoid,
     PayloadAction,
     createAsyncThunk,
+    createSelector,
 } from "@reduxjs/toolkit";
 import axios from "axios";
 import { Post } from "./Post";
@@ -118,3 +119,8 @@ export const selectAllPosts = (state: RootState) => state.posts.posts;
 
 export const selectPostById = (state: RootState, postId: string) =>
     state.posts.posts.find((post) => post.id === postId);
+
+export const selectPostsByUser = createSelector(
+    [selectAllPosts, (state, userId) => userId],
+    (posts, userId) => posts.filter((post) => post.user === userId)
+);

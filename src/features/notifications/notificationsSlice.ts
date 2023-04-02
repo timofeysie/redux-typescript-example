@@ -42,7 +42,7 @@ const notificationsSlice = createSlice({
     name: "notifications",
     initialState: [] as Notification[],
     reducers: {
-        allNotificationsRead(state, action) {
+        allNotificationsRead(state) {
             state.forEach((notification: Notification) => {
                 notification.read = true;
             });
@@ -60,6 +60,8 @@ const notificationsSlice = createSlice({
         });
     },
 });
+
+export const { allNotificationsRead } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer;
 
