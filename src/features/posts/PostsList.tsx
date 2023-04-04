@@ -6,26 +6,34 @@ import { Post } from "./Post";
 import { PostAuthor } from "./PostAuthor";
 import { TimeAgo } from "./TimeAgo";
 import { ReactionButtons } from "./ReactionButtons";
-import { selectAllPosts, fetchPosts } from "./postsSlice";
+import {
+    selectAllPosts,
+    fetchPosts,
+    selectPostIds,
+    selectPostById,
+} from "./postsSlice";
 import type { RootState } from "../../app/store";
 import { Spinner } from "../../components/Spinner";
 
 interface Props {
-    post: Post;
+    postId: any;
 }
 
-const PostExcerpt = ({ post }: Props) => {
+const PostExcerpt = ({ postId }: Props) => {
+    const post = useSelector((state: RootState) =>
+        selectPostById(state, postId)
+    );
     return (
         <article className="post-excerpt">
-            <h3>{post.title}</h3>
+            <h3>{post?.title}</h3>
             <div>
-                <PostAuthor userId={post.user} />
-                <TimeAgo timestamp={post.date} />
+                <PostAuthor userId={post?.user} />
+                <TimeAgo timestamp={post?.date} />
             </div>
-            <p className="post-content">{post.content.substring(0, 100)}</p>
+            <p className="post-content">{post?.content.substring(0, 100)}</p>
 
-            <ReactionButtons post={post} />
-            <Link to={`/posts/${post.id}`} className="button muted-button">
+            {post && <ReactionButtons post={post} />}
+            <Link to={`/posts/${post?.id}`} className="button muted-button">
                 View Post
             </Link>
         </article>
@@ -34,6 +42,7 @@ const PostExcerpt = ({ post }: Props) => {
 
 export const PostsList = () => {
     const dispatch = useDispatch();
+    const orderedPostIds = useSelector(selectPostIds);
     const posts = useSelector(selectAllPosts);
 
     const postStatus = useSelector((state: RootState) => state.posts.status);
@@ -50,13 +59,8 @@ export const PostsList = () => {
     if (postStatus === "loading") {
         content = <Spinner text="Loading..." />;
     } else if (postStatus === "succeeded") {
-        // Sort posts in reverse chronological order by datetime string
-        const orderedPosts = posts
-            .slice()
-            .sort((a, b) => b.date.localeCompare(a.date));
-
-        content = orderedPosts.map((post) => (
-            <PostExcerpt key={post.id} post={post} />
+        content = orderedPostIds.map((postId) => (
+            <PostExcerpt key={postId} postId={postId} />
         ));
     } else if (postStatus === "failed") {
         content = <div>{error}</div>;
