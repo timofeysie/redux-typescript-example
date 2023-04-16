@@ -3,13 +3,15 @@ import type { RootState } from "../../app/store";
 import { useDispatch, useSelector } from "react-redux";
 import { addNewPost } from "./postsSlice";
 import { AppDispatch } from "../../app/store"
+import { selectAllUsers } from "../users/usersSlice";
+import { User } from "../users/User"
 
 export const AddPostForm = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [userId, setUserId] = useState("");
   const dispatch = useDispatch<AppDispatch>();
-  const users = useSelector((state: RootState) => state.users);
+  const users = useSelector(selectAllUsers);
   const [addRequestStatus, setAddRequestStatus] = useState("idle");
 
   const onTitleChanged = (e: React.FormEvent<HTMLInputElement>) =>
@@ -40,7 +42,7 @@ export const AddPostForm = () => {
       }
   };
 
-  const usersOptions = users.map((user) => (
+  const usersOptions = users.map((user: User) => (
     <option key={user.id} value={user.id}>
       {user.name}
     </option>

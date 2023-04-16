@@ -4,17 +4,13 @@ import { useParams, Link } from "react-router-dom";
 import { selectUserById } from "../users/usersSlice";
 import { selectPostsByUser, selectAllPosts } from "../posts/postsSlice";
 import { RootState } from "../../app/store";
+import { User } from "../users/User";
 
 export const UserPage = () => {
   const params = useParams();
   const userId = params.userId ?? "";
 
-    const user = useSelector((state: RootState) => selectUserById(state, userId));
-
-    // const postsForUser = useSelector((state: RootState) => {
-    //     const allPosts = selectAllPosts(state);
-    //     return allPosts.filter((post) => post.user === userId);
-    // });
+    const user: User | unknown = useSelector((state: RootState) => selectUserById(state, userId)) || null;
 
     const postsForUser = useSelector((state: RootState) =>
         selectPostsByUser(state, userId)
@@ -28,7 +24,7 @@ export const UserPage = () => {
 
     return (
         <section>
-            <h2>{user?.name}</h2>
+            <h2>{(user as User).name}</h2>
 
             <ul>{postTitles}</ul>
         </section>

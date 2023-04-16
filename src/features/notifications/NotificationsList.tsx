@@ -7,6 +7,7 @@ import {
     allNotificationsRead,
 } from "./notificationsSlice";
 import classnames from "classnames";
+import { User } from "../users/User";
 
 export const NotificationsList = () => {
     const dispatch = useDispatch();
@@ -20,24 +21,32 @@ export const NotificationsList = () => {
     const renderedNotifications = notifications.map((notification) => {
         const date = parseISO(notification.date);
         const timeAgo = formatDistanceToNow(date);
-        const user = users.find((user) => user.id === notification.user) || {
+
+        const defaultUser: User = {
+            id: null,
             name: "Unknown User",
         };
+
+        const user = users.find(
+            (user): user is User => (user as User).id === notification.user
+        );
 
         const notificationClassname = classnames("notification", {
             new: notification.isNew,
         });
 
-        return (
-            <div key={notification.id} className={notificationClassname}>
-                <div>
-                    <b>{user.name}</b> {notification.message}
+        if (user) {
+            return (
+                <div key={notification.id} className={notificationClassname}>
+                    <div>
+                        <b>{user.name}</b> {notification.message}
+                    </div>
+                    <div title={notification.date}>
+                        <i>{timeAgo} ago</i>
+                    </div>
                 </div>
-                <div title={notification.date}>
-                    <i>{timeAgo} ago</i>
-                </div>
-            </div>
-        );
+            );
+        }
     });
 
     return (
