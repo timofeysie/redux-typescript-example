@@ -18,9 +18,17 @@ export const NotificationsList = () => {
         dispatch(allNotificationsRead());
     });
 
-    const renderedNotifications = notifications.map((notification) => {
-        const date = parseISO(notification.date);
-        const timeAgo = formatDistanceToNow(date);
+    const notificationIds = Object.keys(notifications.entities);
+
+    const renderedNotifications = notificationIds.map((notificationId) => {
+        const notification = notifications.entities[notificationId];
+        if (!notification) {
+            // handle case where notification is undefined
+            return null; // or any default value or appropriate handling
+        }
+
+        const date = notification?.date ? parseISO(notification.date) : null;
+        const timeAgo = date ? formatDistanceToNow(date) : null;
 
         const defaultUser: User = {
             id: null,
