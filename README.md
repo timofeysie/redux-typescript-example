@@ -12,6 +12,167 @@ npm test
 ```
 
 
+## Adding authentication
+
+The example code uses this route to register a user: ```${API_URL}/api/user/login```
+
+The user slice currently uses only the GET endpoint from the backend: ```client.get(API_URL + "/users");```
+
+We do have a POST endpoint that works only via Postman at the moment to add users.
+
+So this change can happen for the POST:
+
+/api/user/login --> /users
+
+### AsyncThunkAction ... is not assignable to parameter of type 'AnyAction'.ts(2345)
+
+I have this action: 
+
+```js
+export const registerUser = createAsyncThunk<
+    void,
+    RegistrationData,
+    { rejectValue: CustomError }
+>("user/register", async (registrationData, { rejectWithValue }) => {
+    ... 
+})
+```
+    
+And in the usage:  
+
+```js
+dispatch(registerUser(data));
+```
+
+I get this error: Argument of type *'AsyncThunkAction<void, RegistrationData, { rejectValue: CustomError; state?: unknown; dispatch?: Dispatch<AnyAction> | undefined; extra?: unknown; serializedErrorType?: unknown; pendingMeta?: unknown; fulfilledMeta?: unknown; rejectedMeta?: unknown; }>' is not assignable to parameter of type 'AnyAction'.ts(2345)*
+
+Solution?  Use the AppDIspatch.
+
+const dispatch: AppDispatch = useDispatch();
+
+### Cannot find name 'div'.ts(2304)
+
+ I am using a package react-hook-form.  Not sure if it's related but the TSX file:
+ 
+ ```js
+ return (
+        <form onSubmit={handleSubmit(submitForm)}>
+```
+
+has this error: *Cannot find name 'form'.ts(2304).*
+
+I have another component: 
+
+```js
+const Error = ({ children, ...props }: ErrorProps) => {
+    return (
+        <div ... 
+```
+
+with a similar error: *Cannot find name 'div'.ts(2304).*
+
+What's going on?  I had the ".ts" file extension.  In a TypeScript project, it's important to use the .tsx file extension for files that contain JSX. This is because the TypeScript compiler needs to know that JSX syntax is being used in order to properly parse and type-check the file.  Change the file extension to ".tsx" and the errors are gone.
+
+### Call the register api
+
+```json
+{
+    "firstName": "Bob",
+    "email": "timofeysie@hotmail.com",
+    "password": "password",
+    "confirmPassword": "password"
+}
+```
+
+I hear it's bad form to send the password openly like that to the backend.  What I understand is that you should hash the password, check that against a hash from the backend, or something like that.
+
+Also, why are we sending the confirm password as well?  That should be a front end only value.
+
+On the backend, the user entity has only two properties:
+
+```js
+@Entity()
+export class User {
+  @ObjectIdColumn()
+  id: ObjectID;
+
+  @Column()
+  name: string;
+}
+```
+
+### 'data' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.ts(7022)
+
+```js
+        const { data } = await axios.post(
+            `${API_URL}/users`,
+            { email, password },
+            config
+        );
+```
+
+Causes this error: *'data' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.ts(7022)*
+
+Using an interface make the error go away.
+
+```js
+interface RegisterData {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+}
+```
+
+And use it like this:
+
+```js
+        const { data }: AxiosResponse<UserData> = await axios.post(
+            `${API_URL}/users`,
+            { email, password },
+            config
+        );
+```
+
+Not we have changed firstName to name, as that's what the existing users API uses.
+
+### Backend architecture
+
+The backend for the [Redux User Auth article repo](https://github.com/Chinwike1/redux-user-auth) is quite different than our Nest.js backend.  THey both rely on Node and Express, but the similarities end there.  The control flow there looks like this:
+
+backend\routes\userRoutes.js
+
+```js
+router.post('/register', userController.registerUser)
+```
+
+backend\controllers\userController.js
+
+```js
+  // create new user document in db
+  const user = await User.create({ firstName, email, password })
+```
+
+backend\models\userModel.js
+
+```js
+// hash user's password with salt before saving document to db
+userSchema.pre('save', async function () {
+  const salt = await bcrypt.genSalt(10)
+  this.password = await bcrypt.hash(this.password, salt)
+})
+```
+
+Well that's a relief.
+
+JWT (JSON Web Token) is a web protocol used to share security information between client and a server.  So why are we sending the password in a POST payload?
+
+Another change we need to make now is to share the registration /users POST endpoint with the /login POST endpount, or create a whole new table for logins.
+
+The idea is to have a flag such as: login: true/false.  If it's true, it's a login.  If it's false, its a registration.
+
+What we could do is use the id for this.  Will the api accept an id when that is created on the backend?  It looks like this: ObjectIdColumn()  id: ObjectID;
+
 ## Getting started with the Redux Toolkit counter example
 
 The Redux Essentials tutorial has 7 pages.

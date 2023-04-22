@@ -1,7 +1,13 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import axios, { AxiosError } from "axios";
+import axios, { AxiosResponse } from "axios";
 
 const API_URL = process.env.REACT_APP_API_URL;
+
+interface UserData {
+    id: string;
+    email: string;
+    userToken: string;
+}
 
 interface LoginPayload {
     email: string;
@@ -9,7 +15,7 @@ interface LoginPayload {
 }
 
 interface RegistrationData {
-    firstName: string;
+    name: string;
     email: string;
     password: string;
 }
@@ -30,8 +36,8 @@ export const userLogin = createAsyncThunk<
             },
         };
 
-        const { data } = await axios.post(
-            `${API_URL}/api/user/login`,
+        const { data }: AxiosResponse<UserData> = await axios.post(
+            `${API_URL}/users`,
             { email, password },
             config
         );
@@ -64,11 +70,7 @@ export const registerUser = createAsyncThunk<
             },
         };
 
-        await axios.post(
-            `${API_URL}/api/user/register`,
-            registrationData,
-            config
-        );
+        await axios.post(`${API_URL}/users`, registrationData, config);
     } catch (error: any) {
         if (error.response && error.response.data.message) {
             return rejectWithValue(error.response.data) as ReturnType<
