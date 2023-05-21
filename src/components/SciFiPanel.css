@@ -1,0 +1,51 @@
+.scifi-panel {
+    position: relative;
+    width: 100%;
+    height: 110px;
+    background-color: #fff;
+    color: #000;
+    overflow: hidden;
+}
+
+.scifi-panel-content {
+    padding: 20px;
+}
+
+.scifi-panel-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 115px;
+    fill: transparent;
+    stroke: #000;
+    stroke-width: 2px;
+}
+
+.title {
+    position: absolute;
+    top: 5px;
+    left: 45px;
+    font-weight: bolder;
+}
+
+.content {
+    position: relative;
+    top: -10px;
+    left: 15px;
+    width: 95%;
+    text-overflow: ellipsis;
+}
+
+.author {
+  position: absolute;
+  top: 78px;
+  left: 80px;
+  font-weight: lighter;
+}
+
+.reactions {
+  position: relative;
+  right: -465px;
+  top: -30px
+}

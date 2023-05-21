@@ -11,8 +11,9 @@ npm start
 npm test
 ```
 
-
 ## Adding authentication
+
+Since the app needs to be deployed, a real-ish authentication is required for the user APIs.  Started off with [Handling user authentication with Redux Toolkit](https://blog.logrocket.com/handling-user-authentication-redux-toolkit/) by Chinwike Maduabuchi.  It uses RTK Query, which we haven't quite gotten to yet, but will eventually.  This is both a backend and frontend feature, but don't call me a full stack developer.  I focus on the front end, but for a personal project, I have no problem calling the shots when it comes to Node.js.
 
 The example code uses this route to register a user: ```${API_URL}/api/user/login```
 
@@ -26,7 +27,7 @@ So this change can happen for the POST:
 
 ### AsyncThunkAction ... is not assignable to parameter of type 'AnyAction'.ts(2345)
 
-I have this action: 
+I have this action:
 
 ```js
 export const registerUser = createAsyncThunk<
@@ -37,7 +38,7 @@ export const registerUser = createAsyncThunk<
     ... 
 })
 ```
-    
+
 And in the usage:  
 
 ```js
@@ -53,7 +54,7 @@ const dispatch: AppDispatch = useDispatch();
 ### Cannot find name 'div'.ts(2304)
 
  I am using a package react-hook-form.  Not sure if it's related but the TSX file:
- 
+
  ```js
  return (
         <form onSubmit={handleSubmit(submitForm)}>
@@ -61,7 +62,7 @@ const dispatch: AppDispatch = useDispatch();
 
 has this error: *Cannot find name 'form'.ts(2304).*
 
-I have another component: 
+I have another component:
 
 ```js
 const Error = ({ children, ...props }: ErrorProps) => {
@@ -156,22 +157,346 @@ backend\controllers\userController.js
 backend\models\userModel.js
 
 ```js
-// hash user's password with salt before saving document to db
 userSchema.pre('save', async function () {
   const salt = await bcrypt.genSalt(10)
   this.password = await bcrypt.hash(this.password, salt)
 })
 ```
 
-Well that's a relief.
+The comment there says: ```// hash user's password with salt before saving document to db```. That's a relief.  You shouldn't be storing raw passwords, but rather the has of them.  I suppose https will take care of hiding the raw password as it is sent to the server for hashing and comparing.  I kind of thought JWT tokens would provide an alternative to that.
 
-JWT (JSON Web Token) is a web protocol used to share security information between client and a server.  So why are we sending the password in a POST payload?
+*JWT (JSON Web Token) is a web protocol used to share security information between client and a server.*  So why are we sending the password in a POST payload?  I have relied on thrid party systems for so long such as Cognito, Auth0 or Okta that I have lost touch with how to do it by hand.  Probably a good time for a refresher.
 
-Another change we need to make now is to share the registration /users POST endpoint with the /login POST endpount, or create a whole new table for logins.
+Another change we need to make now is to share the registration /users POST endpoint with the /login POST endpoint, or create a whole new table for logins.
 
 The idea is to have a flag such as: login: true/false.  If it's true, it's a login.  If it's false, its a registration.
 
 What we could do is use the id for this.  Will the api accept an id when that is created on the backend?  It looks like this: ObjectIdColumn()  id: ObjectID;
+
+Since the two payloads for the registration are different, we can handle that with the same POST.
+
+```js
+interface RegistrationData {
+    name: string;
+    email: string;
+    password: string;
+}
+
+export interface LoginData {
+    email: string;
+    password: string;
+}
+```
+
+After getting started with this, the backend is not liking out
+
+```txt
+2023-04-29T00:21:53.755388961Z stderr F     at processTicksAndRejections (internal/process/task_queues.js:95:5)
+2023-04-29T00:21:53.755386998Z stderr F     at runMicrotasks (<anonymous>)
+2023-04-29T00:21:53.755384211Z stderr F     at UsersService.create (/usr/src/app/dist/users/users.service.js:36:61)
+2023-04-29T00:21:53.755379989Z stderr F TypeError: Cannot read property 'hash' of undefined
+2023-04-29T00:21:53.755348795Z stderr F [Nest] 3  - 04/29/2023, 12:21:53 AM   ERROR [ExceptionsHandler] Cannot read property 'hash' of undefined
+2023-04-29T00:21:53.752672646Z stdout F found login for { email: 'timofeyc@hotmail.com', password: 'xxx!' }
+```
+
+That line is:
+
+```js
+const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+```
+
+Trying to share the Postman project is not as easy as it should be.  "Team cloudy-comet-922873 is excited to work with you" yet not able to see the shared workspace on this machine.
+
+### CORS errors
+
+I'm not sure why this error didn't show up before, but now, we are seeing this on all the routes:
+
+```err
+Access to XMLHttpRequest at 'https://p01--flash--sk649jwvvmyk.code.run/users' from origin 'http://localhost:3000' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+```
+
+Solution: Enable CORS [on Nest.js](https://docs.nestjs.com/security/cors).
+
+### Delete `␍`eslintprettier/prettier
+
+As well as the CORS error and the bcrypt error, this appeared on all files:
+
+```js
+Delete `␍`eslintprettier/prettier
+module "c:/Users/timof/repos/node/flash/node_modules/@nestjs/common/index"
+View Problem (Alt+F8)
+Quick Fix... (Ctrl+.)
+```
+
+It's due to my installing all the recommended plugins which I added to the backend flash repo to use on this new laptop.  The solution was in the prettier config.
+
+[This answer](https://stackoverflow.com/questions/53516594/why-do-i-keep-getting-eslint-delete-cr-prettier-prettier) seemed to work: *Try setting the "endOfLine":"auto" in your .prettierrc (or .prettierrc.json) file (inside the object)*
+
+### Error: data and hash arguments required
+
+The Notrhflank logs are in reverse order and show that bcrypt is being used incorrectly:
+
+```txt
+2023-04-30T03:13:09.34325128Z stderr F     at UsersService.create (/usr/src/app/dist/users/users.service.js:38:40)
+2023-04-30T03:13:09.343247793Z stderr F     at Object.compare (/usr/src/app/node_modules/bcrypt/bcrypt.js:204:25)
+2023-04-30T03:13:09.343244216Z stderr F     at Object.module.exports.promise (/usr/src/app/node_modules/bcrypt/promises.js:20:12)
+2023-04-30T03:13:09.343239926Z stderr F     at new Promise (<anonymous>)
+2023-04-30T03:13:09.343235735Z stderr F     at /usr/src/app/node_modules/bcrypt/promises.js:29:12
+2023-04-30T03:13:09.343231614Z stderr F     at Object.compare (/usr/src/app/node_modules/bcrypt/bcrypt.js:208:17)
+2023-04-30T03:13:09.343226076Z stderr F Error: data and hash arguments required
+2023-04-30T03:13:09.343187622Z stderr F [Nest] 3  - 04/30/2023, 3:13:09 AM   ERROR [ExceptionsHandler] data and hash arguments required
+2023-04-30T03:13:08.939574443Z stdout F found login for { email: 'asdf@asdf.com', password: 'asdf' }
+```
+
+Might have to read the [docs about bcrypt](https://www.npmjs.com/package/bcrypt) to figure this out.
+
+The hash function appears to take a callback function:
+
+```js
+To hash a password:
+Technique 1 (generate a salt and hash on separate function calls):
+
+bcrypt.genSalt(saltRounds, function(err, salt) {
+    bcrypt.hash(myPlaintextPassword, salt, function(err, hash) {
+        // Store hash in your password DB.
+    });
+});
+```
+
+### Running Mongo locally
+
+I have about five tabs open for setting up MongoDB on Windows.  Each page shows something required first which then leads to another page which then leads to another and then eventually a download page.  It's called a rabbit hole.
+
+Which method to use?  Here are the two basic choices.
+
+- Use this link to install MongoDB 6.0 Community Edition on Windows [using the default installation wizard.](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows/)
+- [Use this tutorial](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows-unattended/) *to install MongoDB 6.0 Community Edition on Windows in an unattended fashion using msiexec.exe from the command line. This is useful for system administrators who wish to deploy MongoDB using automation.*
+
+Next, the MongoDB Shell ```mongosh``` is not installed with MongoDB. It must be [downloaded](https://www.mongodb.com/try/download/shell) and [installed](https://www.mongodb.com/docs/mongodb-shell/install/) separately.
+
+This takes about 10 steps.  They probably don't know about npm yet.
+
+On Windows we must *edit our environment "Path" variable to add the filepath to the mongosh binary.*
+
+The value I add is the path to the exe file: C:\Users\timof\mongosh-1.8.2-win32-x64\bin\mongosh.exe but you only enter that path to the bin: C:\Users\timof\mongosh-1.8.2-win32-x64\bin.
+
+Run the MongoDB 6.0.5 installer.
+
+Log and data directories created:
+
+```txt
+C:\Program Files\MongoDB\Server\6.0\data\
+C:\Program Files\MongoDB\Server\6.0\log\
+C:\Program Files\MongoDB\Server\6.0\bin
+```
+
+C:\Program Files\MongoDB\Server\6.0\bin\mongod.exe --config "C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg"
+
+Username: book-anh52umlgo\timof
+
+PS C:\Program Files\MongoDB\Server\6.0\bin> mongod --config "C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg"
+{"t":{"$date":"2023-05-06T01:41:28.081Z"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":38,"codeName":"FileNotOpen","errmsg":"Can't initialize rotatable log file :: caused by :: Failed to open C:\\Program Files\\MongoDB\\Server\\6.0\\log\\mongod.log"}}}
+
+icacls "C:\Program Files\MongoDB\Server\6.0\log" /grant "book-anh52umlgo\timof:(OI)(CI)F" /t
+
+I had to create the directory C:/data/db and then the mongod runs.
+
+mongod to start mongo.
+
+mongosh to run the shell.
+
+4. Switch to the database where the user is located by running the command use <database_name>.
+
+db.createUser({user: "book-anh52umlgo\timof", pwd: "", roles: [<role(s)>]}). Replace <username> and <password> with the desired values, and <role(s)> with the appropriate roles for the user.
+
+```shell
+db.createUser({
+  user: "book-anh52umlgo\timof",
+  pwd: "P4ssword1!",
+  roles: [
+    { role: "readWrite", db: "flash" }
+  ]
+})
+```
+
+Verify that the user was created successfully by running the command db.getUsers()
+
+```shell
+flash> db.getUsers()
+{
+  users: [
+    {
+      _id: 'flash.book-anh52umlgo\timof',
+      userId: new UUID("fc14c512-d5a0-4d7b-a0d1-9a34435a7bce"),
+      user: 'book-anh52umlgo\timof',
+      db: 'flash',
+      roles: [ { role: 'readWrite', db: 'flash' } ],
+      mechanisms: [ 'SCRAM-SHA-1', 'SCRAM-SHA-256' ]
+    }
+  ],
+  ok: 1
+}
+```
+
+5. Authenticate as a user with the necessary privileges to modify user accounts by running the command db.auth("<username>", "<password>"). Replace <username> and <password> with the credentials of an existing user with the necessary privileges.
+
+6. Set the password for the desired user by running the command db.updateUser("<username>", {pwd: "<new_password>"}). Replace <username> with the username of the user you want to modify and <new_password> with the new password you want to set.
+
+7. Exit the MongoDB shell by running the command exit.
+
+8. Open your Nest app and update your database connection string. You will need to use the following values:
+
+DB_HOST: The host name or IP address of the MongoDB server. If you're running MongoDB on the same machine as your Nest app, you can use localhost.
+
+DB_PORT: The port number of the MongoDB server. The default port number is 27017, but you may have configured a different port number.
+
+DB_USERNAME: The username of the MongoDB user you just modified.
+
+DB_PASSWORD: The new password you just set for the MongoDB user.
+
+DB_DATABASE: The name of the database you want to connect to.
+
+So, you will need to format the connection string in this way:
+
+mongodb://<DB_USERNAME>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_DATABASE>
+
+Replace the placeholders with the appropriate values.
+
+```txt
+process.env.DB_HOST,
+port: parseInt(process.env.DB_PORT),
+username: process.env.DB_USERNAME,
+password: process.env.DB_PASSWORD,
+database: process.env.DB_DATABASE,
+```
+
+DB_HOST=
+DB_PORT=
+DB_USERNAME=
+DB_PASSWORD=
+DB_DATABASE=
+
+mongosh-1.8.2-win32-x64/bin/mongosh
+
+C:\Users\timof\mongosh-1.8.2-win32-x64\bin\mongosh.exe
+
+What is MongoDB Compass? *MongoDB Compass is a powerful GUI for querying, aggregating, and analyzing your MongoDB data in a visual environment.*
+
+```err
+[Nest] 27972  - 07/05/2023, 5:53:32 am   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (1)...
+MongoNetworkError: failed to connect to server [localhost:27017] on first connect [Error: read ECONNRESET
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:217:20) {
+  name: 'MongoNetworkError'
+}]
+    at Pool.<anonymous> (C:\Users\timof\repos\node\flash\node_modules\mongodb\lib\core\topologies\server.js:441:11)
+    at Pool.emit (node:events:513:28)
+```
+
+```log
+{"t":{"$date":"2023-05-07T05:59:01.932+10:00"},"s":"I",  "c":"NETWORK",  "id":22988,   "ctx":"conn43","msg":"Error receiving request from client. Ending connection from remote","attr":{"error":{"code":141,"codeName":"SSLHandshakeFailed","errmsg":"SSL handshake received but server is started without SSL support"},"remote":"127.0.0.1:55138","connectionId":43}}
+```
+
+### ChatGPT answer
+
+Based on the error message you provided, it seems that there is an SSL handshake failure. This means that the client is attempting to connect to the server using SSL, but the server is not configured to accept SSL connections.
+
+To resolve this issue, you can either configure the server to accept SSL connections or modify the client to connect without SSL. If you choose to configure the server for SSL, you will need to generate an SSL certificate and configure the server to use it.
+
+Here's an example of how to configure the server for SSL using the mongod command:
+
+mongod --sslMode requireSSL --sslPEMKeyFile /path/to/keyfile.pem --sslCAFile /path/to/cafile.pem
+
+You will need to replace /path/to/keyfile.pem and /path/to/cafile.pem with the paths to your SSL key and CA files, respectively.
+
+To generate an SSL certificate
+
+openssl.exe genrsa -out private.key 2048
+
+openssl req -new -key private.key -out csr.pem
+
+C:\Users\timof>openssl.exe genrsa -out private.key 2048
+WARNING: can't open config file: /usr/local/ssl/openssl.cnf
+Generating RSA private key, 2048 bit long modulus
+...............................................................................+++++
+.......................................+++++
+e is 65537 (0x10001)
+
+C:\Users\timof>openssl.exe req -new -key private.key -out csr.pem
+WARNING: can't open config file: /usr/local/ssl/openssl.cnf
+Unable to load config info from /usr/local/ssl/openssl.cnf
+
+Had to create an openssl.cfg file
+
+openssl.exe req -new -key private.key -out csr.pem -config C:\Users\timof\openssl.cfg
+
+C:\Users\timof\mongosh-1.8.2-win32-x64\bin
+
+mongod --sslMode requireSSL --sslPEMKeyFile C:\Users\timof\mongosh-1.8.2-win32-x64\bin\csr.pem --sslCAFile C:\Program Files\MongoDB\Server\6.0\bin\afile.pem
+
+C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg
+
+How to restart mongo?
+
+mongod --dbpath C:\data\db --sslMode requireSSL --sslPEMKeyFile C:\Program Files\MongoDB\Server\6.0\bin\csr.pem
+
+It's really not easy:
+
+PS C:\Program Files\MongoDB\Server\6.0> mongod --dbpath "C:\data\db" --sslMode requireSSL --sslPEMKeyFile "C:\Program Files\MongoDB\Server\6.0\bin\csr.pem"
+{"t":{"$date":"2023-05-07T01:04:47.638Z"},"s":"W",  "c":"CONTROL",  "id":23322,   "ctx":"-","msg":"Option: sslMode is deprecated. Please use tlsMode instead."}
+{"t":{"$date":"2023-05-07T01:04:47.639Z"},"s":"W",  "c":"CONTROL",  "id":23321,   "ctx":"-","msg":"Option: This name is deprecated. Please use the preferred name instead.","attr":{"deprecatedName":"sslPEMKeyFile","preferredName":"tlsCertificateKeyFile"}}
+{"t":{"$date":"2023-05-07T11:04:47.647+10:00"},"s":"I",  "c":"NETWORK",  "id":4915701, "ctx":"thread1","msg":"Initialized wire specification","attr":{"spec":{"incomingExternalClient":{"minWireVersion":0,"maxWireVersion":17},"incomingInternalClient":{"minWireVersion":0,"maxWireVersion":17},"outgoing":{"minWireVersion":6,"maxWireVersion":17},"isInternalClient":true}}}
+{"t":{"$date":"2023-05-07T11:04:47.650+10:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"thread1","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
+{"t":{"$date":"2023-05-07T11:04:47.650+10:00"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"thread1","msg":"Error during global initialization","attr":{"error":{"code":140,"codeName":"InvalidSSLConfiguration","errmsg":"Failed to find PEM blob header: -----BEGIN CERTIFICATE-----"}}}
+PS C:\Program Files\MongoDB\Server\6.0>
+
+The .pem file does begin like this:
+
+-----BEGIN CERTIFICATE REQUEST-----
+MIIC+DCCAeACAQAwgYsxCzAJBgNVBAYTAkFVMQwwCgYDVQQIDANOU1cxDzANBgNV
+
+So I followed the steps to do this all again:
+
+```shell
+openssl genrsa -out private.key 2048
+openssl req -new -key private.key -out csr.pem -config C:\Users\timof\openssl.cfg
+openssl x509 -req -days 365 -in csr.pem -signkey private.key -out server.crt  -config C:\Users\timof\openssl.cfg
+type private.key server.crt > mongodb.pem
+```
+
+Start the server:
+
+mongod --config "C:\Program Files\MongoDB\Server\6.0\bin\mongod.cfg" --sslMode requireSSL --sslPEMKeyFile "C:\Program Files\MongoDB\Server\6.0\bin\csr.pem" --sslCAFile "C:\Program Files\MongoDB\Server\6.0\bin\mongodb.pem"
+
+After all this, it ends in failure:
+
+{"t":{"$date":"2023-05-07T12:14:13.046+10:00"},"s":"I",  "c":"CONTROL",  "id":20698,   "ctx":"-","msg":"***** SERVER RESTARTED *****"}
+{"t":{"$date":"2023-05-07T12:14:13.885+10:00"},"s":"I",  "c":"CONTROL",  "id":23285,   "ctx":"-","msg":"Automatically disabling TLS 1.0, to force-enable TLS 1.0 specify --sslDisabledProtocols 'none'"}
+{"t":{"$date":"2023-05-07T12:14:13.886+10:00"},"s":"D1", "c":"ASSERT",   "id":23074,   "ctx":"-","msg":"User assertion","attr":{"error":"InvalidSSLConfiguration: Failed to find PEM blob header: -----BEGIN CERTIFICATE-----","file":"src\\mongo\\util\\net\\ssl_manager_windows.cpp","line":435}}
+{"t":{"$date":"2023-05-07T12:14:13.886+10:00"},"s":"F",  "c":"CONTROL",  "id":20574,   "ctx":"-","msg":"Error during global initialization","attr":{"error":{"code":140,"codeName":"InvalidSSLConfiguration","errmsg":"Failed to find PEM blob header: -----BEGIN CERTIFICATE-----"}}}
+
+ChatGPT says:
+
+These error messages suggest that there are issues with the SSL/TLS configuration of the MongoDB server.
+
+The first set of messages indicate that certain SSL/TLS configuration options are deprecated and should be replaced with their preferred names. The server also automatically disabled TLS 1.0, which is an outdated protocol, and encountered an error related to SSL configuration.
+
+The second and third sets of messages indicate that the server was restarted, but encountered an error related to SSL configuration during global initialization, specifically with finding the PEM blob header for the certificate. This could be due to incorrect configuration of the PEM key file or the CA file.
+
+To resolve these issues, you may need to review and update your SSL/TLS configuration options and ensure that the PEM key file and CA file are configured correctly. You may also want to check that the server's SSL/TLS configuration is compatible with the clients that will be accessing it.
+
+### Northflank Local access
+
+Install the Northflank CLI: you can install the Northflank CLI using NPM or yarn:
+
+npm i -g @northflank/cli
+
+Create a new context and log in with an account token:
+
+northflank login -n default-project -t  eyJ...
+
+It says local access, but not the local I think it means.
+
+I think I will stick with the front end.
 
 ## Getting started with the Redux Toolkit counter example
 
@@ -905,7 +1230,7 @@ The first error on the *match* object in the SinglePostPage highlights an import
 
 The error reads: Binding element 'match' implicitly has an 'any' type.ts(7031)
 
-Objects with props need types like this: 
+Objects with props need types like this:
 
 ```javascript
 {a,b} : {a:any, b:any}
@@ -1227,6 +1552,7 @@ Put a test id on the nav link:
   <Link to="/" data-testid="nav-post-link">Posts</Link>
 </div>
 ```
+
 a
 Add the below at the end of the same test case and we have another regression test ready to go.
 
@@ -1991,7 +2317,6 @@ Since it's mentioning the counter there, I feel like there was some cutting and 
 
 Anyhow, to fix the error, you have to add the user ids to the src\features\posts\postsSlice.spec.ts initialState, expectedPostAddedState and postUpdatedState arrays and then the tests will be green once again.
 
-
 ## More Post Features
 
 The last section of part 4 is called [More Post Features](https://redux.js.org/tutorials/essentials/part-4-using-data#more-post-features).  It details adding three features commonly found is social media apps.
@@ -2365,7 +2690,7 @@ Element implicitly has an 'any' type because index expression is not of type 'nu
 No quick fixes available
 ```
 
-Typescript has a "as keyof" syntax which comes to mind here.  But as  the answer to this StackOverflow questions[Element implicitly has an 'any' type because index expression is not of type 'number' [7015]](https://stackoverflow.com/questions/53526178/element-implicitly-has-an-any-type-because-index-expression-is-not-of-type-nu) points out, *This is happening because you're attempting to index an object with a numeric index signature with string keys.*
+Typescript has a "as keyof" syntax which comes to mind here.  But as  the answer to this StackOverflow questions[Element implicitly has an 'any' type because index expression is not of type 'number' [7015]](<https://stackoverflow.com/questions/53526178/element-implicitly-has-an-any-type-because-index-expression-is-not-of-type-nu>) points out, *This is happening because you're attempting to index an object with a numeric index signature with string keys.*
 
 The solutions given is: *A way to get this working (a hacky way) would be to cast the indexer to a string*.  For us, this looks like this:
 
@@ -2514,7 +2839,7 @@ I'm surprised there is only one failure:
          |                 ^    
 ```
 
-If we look instead for (/View Post/i)[1]), the tests pass the first time, then fail the next.
+If we look instead for [/View Post/i](1)), the tests pass the first time, then fail the next.
 
 Anyhow, we need at least one test for the the reactions feature.
 

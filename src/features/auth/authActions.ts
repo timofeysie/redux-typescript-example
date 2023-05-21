@@ -9,16 +9,17 @@ interface UserData {
     userToken: string;
 }
 
-interface LoginPayload {
-    email: string;
-    password: string;
-}
-
 interface RegistrationData {
     name: string;
     email: string;
     password: string;
 }
+
+export interface LoginData {
+    email: string;
+    password: string;
+}
+
 
 interface CustomError {
     message: string;
@@ -26,9 +27,9 @@ interface CustomError {
 
 export const userLogin = createAsyncThunk<
     any,
-    LoginPayload,
+    LoginData,
     { rejectValue: CustomError }
->("user/login", async ({ email, password }, { rejectWithValue }) => {
+>("user/login", async (loginPayload, { rejectWithValue }) => {
     try {
         const config = {
             headers: {
@@ -38,10 +39,10 @@ export const userLogin = createAsyncThunk<
 
         const { data }: AxiosResponse<UserData> = await axios.post(
             `${API_URL}/users`,
-            { email, password },
+            loginPayload,
             config
         );
-
+            console.log('got login data');
         localStorage.setItem("userToken", data.userToken);
 
         return data;

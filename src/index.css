@@ -114,11 +114,13 @@ section h1 {
 
 .post-excerpt {
   padding: 0.25rem 0.25rem;
-  border: 1px solid rgb(177, 174, 174);
-  border-radius: 7px;
 }
 
-.posts-list .post-excerpt + .post-excerpt {
+.posts-list {
+  margin-top: 20px;
+}
+
+.post-excerpt + .post-excerpt {
   margin-top: 0.5rem;
 }
 
@@ -151,11 +153,15 @@ button:disabled:hover {
 }
 
 button.reaction-button {
-  border: 1px solid #e0e3e9;
-  padding: 5px 10px;
   margin: 5px 6px 10px;
-  border-radius: 4px;
   white-space: nowrap;
+  background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
 }
 
 .spinner {
