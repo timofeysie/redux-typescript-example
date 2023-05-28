@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, forwardRef, ForwardRefRenderFunction, Ref, RefObject } from 'react';
+
 import "./SciFiPanel.css";
 import { Post } from "../features/posts/Post";
 import PostAuthor from "../features/posts/PostAuthor";
@@ -13,7 +14,10 @@ interface SciFiPanelProps {
 const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
     const [parentWidth, setParentWidth] = useState<number>(0);
     const [authorRefWidth, setRefAuthorWidth] = useState<number>(0);
+    const [timeAgoRefWidth, setTimeAgoWidth] = useState<number>(0);
     const postAuthorRef = useRef<HTMLDivElement>(null);
+    const timeAgoRef: RefObject<HTMLDivElement> = useRef(null);
+    const ForwardedTimeAgo = forwardRef(TimeAgo);
     const titleRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         const handleResize = () => {
@@ -31,19 +35,42 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
     useEffect(() => {
       if (postAuthorRef.current) {
         const width = postAuthorRef.current.offsetWidth;
-        console.log('width', width)
         setRefAuthorWidth(width);
       }
     }, []);
 
+    useEffect(() => {
+        if (timeAgoRef.current) {
+          const width = timeAgoRef.current.getBoundingClientRect().width;
+          setTimeAgoWidth(width);
+        }
+      }, []);
+
+    const calculatePointValue = (width: number, scaleFactor: number): number => {
+        // Calculate the point value based on the width and the scaling factor
+        const pointValue = width / scaleFactor;
+        return pointValue;
+    };
     const strokeWidth = 3;
     const tabAngle = 5;
     const tabHeight = 75;
-    const titleWidth = post.title ? post.title.length + tabAngle + 13 : 0;
+    let minTitleWidth = 0;
+    if (post.title) {
+        minTitleWidth = post.title ? post.title.length + tabAngle + 13 : 0;
+        if (minTitleWidth < post.title.length - 20) {
+            minTitleWidth = post.title.length;
+        }
+    }
+    const titleWidth = minTitleWidth;
     const contentHeight = 230;
     const contentWidth = 110;
-    const authorWidth = (authorRefWidth/3) + 20;
-    console.log('authorRefWidth', authorRefWidth)
+    const bottomTabStartingPoint = 5;
+    const authorWidthRaw = authorRefWidth + timeAgoRefWidth;
+    const scaleFactor = 4.5; // Adjust this scaling factor based on your requirements
+    const authorWidth = calculatePointValue(authorWidthRaw, scaleFactor);
+
+    const contentLength = parentWidth < 725 ? 80 : 180;
+    const ellipsis = post.content.length > contentLength ? "..." : "";
 
     return (
         <>
@@ -53,9 +80,9 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
                     style={{ width: `${titleWidth + 20}px` }}
                 >
                     <div className="title">
-                      <Link to={`/posts/${post?.id}`}>
-                      {post.title}
-            </Link></div>
+                        <Link to={`/posts/${post?.id}`}>
+                            {post.title}
+                        </Link></div>
                 </div>
                 <svg
                     className="scifi-panel-border"
@@ -74,17 +101,17 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
                           ${contentWidth - 3},${tabHeight} 
                           ${contentWidth - 3},${contentHeight - tabHeight} 
                           ${contentWidth - tabAngle - 3},${contentHeight}
-                          ${authorWidth},${contentHeight} 
-                          ${authorWidth - tabAngle},${contentHeight + tabHeight} 
-                          ${5 + tabAngle},${contentHeight + tabHeight} 
-                          5,${contentHeight} 
+                          ${authorWidth + tabAngle},${contentHeight} 
+                          ${authorWidth},${contentHeight + tabHeight} 
+                          ${bottomTabStartingPoint + tabAngle},${contentHeight + tabHeight} 
+                          ${bottomTabStartingPoint},${contentHeight} 
                           0,${contentHeight}`}
                     />
                 </svg>
-                <div className="content">{post.content.substring(0, 180)}</div>
+                <div className="content">{post.content.substring(0, contentLength)} {ellipsis}</div>
                 <div className="author">
                   <PostAuthor ref={postAuthorRef}  userId={post?.user} />
-                  <TimeAgo timestamp={post?.date} />
+                  <ForwardedTimeAgo ref={timeAgoRef} timestamp={post?.date} />
                 </div>
             </div>
             <div className="reactions"><ReactionButtons post={post} /></div>

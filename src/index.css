@@ -3,6 +3,7 @@
 }
 
 body {
+  width: auto;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -95,10 +96,20 @@ nav a:hover {
 /* Main content */
 
 section {
+  width: 100%;
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
   padding: 0 1.5rem;
+}
+
+@media screen and (max-width: 767px) {
+  section {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+  }
 }
 
 section h1 {

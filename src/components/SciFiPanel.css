@@ -45,7 +45,8 @@
 }
 
 .reactions {
-  position: relative;
-  right: -465px;
-  top: -30px
+    text-align: right;
+    position: relative;
+    right: 15px;
+    top: -30px
 }
