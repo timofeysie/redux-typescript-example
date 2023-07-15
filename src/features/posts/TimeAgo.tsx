@@ -1,11 +1,11 @@
-import React from "react";
+import React, { ForwardRefRenderFunction } from 'react';
 import { parseISO, formatDistanceToNow } from "date-fns";
 
 interface TimeAgoProps {
   timestamp: string | undefined;
 }
 
-export const TimeAgo = ({ timestamp }: TimeAgoProps) => {
+export const TimeAgo: ForwardRefRenderFunction<HTMLDivElement, TimeAgoProps> = ({ timestamp }, ref) => {
   let timeAgo = "";
   if (timestamp) {
     const date = parseISO(timestamp);
@@ -14,7 +14,7 @@ export const TimeAgo = ({ timestamp }: TimeAgoProps) => {
   }
 
   return (
-    <span title={timestamp}>
+    <span ref={ref} title={timestamp}>
       &nbsp; <i>{timeAgo}</i>
     </span>
   );

@@ -3,6 +3,7 @@
 }
 
 body {
+  width: auto;
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -95,10 +96,20 @@ nav a:hover {
 /* Main content */
 
 section {
+  width: 100%;
   max-width: 800px;
   margin-left: auto;
   margin-right: auto;
   padding: 0 1.5rem;
+}
+
+@media screen and (max-width: 767px) {
+  section {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+  }
 }
 
 section h1 {
@@ -114,11 +125,13 @@ section h1 {
 
 .post-excerpt {
   padding: 0.25rem 0.25rem;
-  border: 1px solid rgb(177, 174, 174);
-  border-radius: 7px;
 }
 
-.posts-list .post-excerpt + .post-excerpt {
+.posts-list {
+  margin-top: 20px;
+}
+
+.post-excerpt + .post-excerpt {
   margin-top: 0.5rem;
 }
 
@@ -151,11 +164,15 @@ button:disabled:hover {
 }
 
 button.reaction-button {
-  border: 1px solid #e0e3e9;
-  padding: 5px 10px;
   margin: 5px 6px 10px;
-  border-radius: 4px;
   white-space: nowrap;
+  background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
 }
 
 .spinner {

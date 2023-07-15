@@ -26,7 +26,7 @@ export const Navbar = () => {
   return (
       <nav>
           <section>
-              <h1>Redux Essentials Example</h1>
+              <h1>Ruffmello Essentials</h1>
 
               <div className="navContent">
                   <div className="navLinks">
@@ -36,6 +36,12 @@ export const Navbar = () => {
                       <Link to="/users">Users</Link>
                       <Link to="/notifications">
                           Notifications {unreadNotificationsBadge}
+                      </Link>
+                      <Link to="/register">
+                          Register
+                      </Link>
+                      <Link to="/login">
+                          Login
                       </Link>
                   </div>
                   <button className="button" onClick={fetchNewNotifications}>

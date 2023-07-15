@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAppSelector } from "../../app/hooks";
-import { PostAuthor } from "./PostAuthor";
+import PostAuthor from "./PostAuthor";
 import { Post } from "./Post";
 import { ReactionButtons } from "./ReactionButtons";
 import { selectPostById } from "./postsSlice";

@@ -9,6 +9,8 @@ import { EditPostForm } from "./features/posts/EditPostForm"
 import { UsersList } from "./features/users/UsersList"
 import { UserPage } from "./features/users/UserPage"
 import { NotificationsList } from "./features/notifications/NotificationsList"
+import RegisterScreen from "./features/auth/RegisterScreen"
+import LoginScreen from "./features/auth/LoginScreen"
 
 function App() {
   return (
@@ -33,6 +35,8 @@ function App() {
                   <Route path="/users" element={<UsersList />} />
                   <Route path="/users/:userId" element={<UserPage />} />
                   <Route path="/notifications" element={<NotificationsList />} />
+                  <Route path='/register' element={<RegisterScreen />} />
+                  <Route path='/login' element={<LoginScreen />} />
               </Routes>
           </div>
       </>
