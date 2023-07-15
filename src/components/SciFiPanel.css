@@ -38,15 +38,53 @@
 }
 
 .author {
-  position: absolute;
-  top: 78px;
-  left: 80px;
-  font-weight: lighter;
+    position: absolute;
+    top: 78px;
+    left: 80px;
+    font-weight: lighter;
 }
 
 .reactions {
     text-align: right;
     position: relative;
     right: 15px;
-    top: -30px
+    top: -30px;
+}
+
+/* Mobile view styles */
+@media (max-width: 768px) {
+    .scifi-panel {
+        height: auto;
+        padding: 10px;
+    }
+
+    .scifi-panel-border {
+        height: auto;
+    }
+
+    .title {
+        position: absolute;
+        top: 20px;
+        left: 14px;
+    }
+
+    .content {
+        position: static;
+        width: 100%;
+        text-overflow: initial;
+        margin-right: 15px;
+
+    }
+
+    .author {
+        position: static;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    .reactions {
+        position: static;
+        text-align: center;
+        margin-top: 10px;
+    }
 }

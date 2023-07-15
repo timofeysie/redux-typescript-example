@@ -1,4 +1,12 @@
-import React, { useRef, useEffect, useState, forwardRef, ForwardRefRenderFunction, Ref, RefObject } from 'react';
+import React, {
+    useRef,
+    useEffect,
+    useState,
+    forwardRef,
+    ForwardRefRenderFunction,
+    Ref,
+    RefObject,
+} from "react";
 
 import "./SciFiPanel.css";
 import { Post } from "../features/posts/Post";
@@ -33,20 +41,23 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
     }, []);
 
     useEffect(() => {
-      if (postAuthorRef.current) {
-        const width = postAuthorRef.current.offsetWidth;
-        setRefAuthorWidth(width);
-      }
+        if (postAuthorRef.current) {
+            const width = postAuthorRef.current.offsetWidth;
+            setRefAuthorWidth(width);
+        }
     }, []);
 
     useEffect(() => {
         if (timeAgoRef.current) {
-          const width = timeAgoRef.current.getBoundingClientRect().width;
-          setTimeAgoWidth(width);
+            const width = timeAgoRef.current.getBoundingClientRect().width;
+            setTimeAgoWidth(width);
         }
-      }, []);
+    }, []);
 
-    const calculatePointValue = (width: number, scaleFactor: number): number => {
+    const calculatePointValue = (
+        width: number,
+        scaleFactor: number
+    ): number => {
         // Calculate the point value based on the width and the scaling factor
         const pointValue = width / scaleFactor;
         return pointValue;
@@ -63,7 +74,9 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
     }
     const titleWidth = minTitleWidth;
     const contentHeight = 230;
+    const mobileHeight = contentHeight + 150 - 10;
     const contentWidth = 110;
+    const mobileWidth = 130;
     const bottomTabStartingPoint = 5;
     const authorWidthRaw = authorRefWidth + timeAgoRefWidth;
     const scaleFactor = 4.5; // Adjust this scaling factor based on your requirements
@@ -71,6 +84,39 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
 
     const contentLength = parentWidth < 725 ? 80 : 180;
     const ellipsis = post.content.length > contentLength ? "..." : "";
+
+    const mobileViewBox = "-1 -3 150 340";
+    const desktopViewBox = "-1 -3 110 340";
+
+    // Determine the current viewbox based on the breakpoint
+    const currentViewBox = parentWidth < 768 ? mobileViewBox : desktopViewBox;
+
+    // Update the SVG points for the mobile view
+    let svgPoints = `
+  0,${tabHeight}
+  ${tabAngle},${strokeWidth}
+  ${titleWidth},${strokeWidth}
+  ${titleWidth + tabAngle},${tabHeight}
+  ${contentWidth - 3},${tabHeight}
+  ${contentWidth - 3},${contentHeight - tabHeight}
+  ${contentWidth - tabAngle - 3},${contentHeight}
+  ${authorWidth + tabAngle},${contentHeight}
+  ${authorWidth},${contentHeight + tabHeight}
+  ${bottomTabStartingPoint + tabAngle},${contentHeight + tabHeight}
+  ${bottomTabStartingPoint},${contentHeight}
+  0,${contentHeight}
+`;
+
+    // Adjust the SVG points for the mobile view
+    if (parentWidth < 768) {
+        svgPoints = `
+    0,0
+    ${mobileWidth},0
+    ${mobileWidth},${mobileHeight - tabHeight}    
+    ${contentWidth - tabAngle - 10},${mobileHeight}    
+    0,${mobileHeight}
+  `;
+    }
 
     return (
         <>
@@ -80,41 +126,32 @@ const SciFiPanel: React.FC<SciFiPanelProps> = ({ post }) => {
                     style={{ width: `${titleWidth + 20}px` }}
                 >
                     <div className="title">
-                        <Link to={`/posts/${post?.id}`}>
-                            {post.title}
-                        </Link></div>
+                        <Link to={`/posts/${post?.id}`}>{post.title}</Link>
+                    </div>
                 </div>
                 <svg
                     className="scifi-panel-border"
-                    viewBox={`-1 -3 ${contentWidth} 340`}
+                    viewBox={currentViewBox} // Use the current viewbox based on the breakpoint
                     preserveAspectRatio="none"
                 >
                     <polygon
                         stroke="#000" // Set the stroke color to white
                         strokeWidth="3" // Set the stroke width to 2 pixels
                         vectorEffect="non-scaling-stroke"
-                        points={`
-                          0,${tabHeight} 
-                          ${tabAngle},${strokeWidth} 
-                          ${titleWidth},${strokeWidth} 
-                          ${titleWidth + tabAngle},${tabHeight} 
-                          ${contentWidth - 3},${tabHeight} 
-                          ${contentWidth - 3},${contentHeight - tabHeight} 
-                          ${contentWidth - tabAngle - 3},${contentHeight}
-                          ${authorWidth + tabAngle},${contentHeight} 
-                          ${authorWidth},${contentHeight + tabHeight} 
-                          ${bottomTabStartingPoint + tabAngle},${contentHeight + tabHeight} 
-                          ${bottomTabStartingPoint},${contentHeight} 
-                          0,${contentHeight}`}
+                        points={svgPoints} // Use the updated SVG points
                     />
                 </svg>
-                <div className="content">{post.content.substring(0, contentLength)} {ellipsis}</div>
+                <div className="content">
+                    {post.content.substring(0, contentLength)} {ellipsis}
+                </div>
                 <div className="author">
-                  <PostAuthor ref={postAuthorRef}  userId={post?.user} />
-                  <ForwardedTimeAgo ref={timeAgoRef} timestamp={post?.date} />
+                    <PostAuthor ref={postAuthorRef} userId={post?.user} />
+                    <ForwardedTimeAgo ref={timeAgoRef} timestamp={post?.date} />
                 </div>
             </div>
-            <div className="reactions"><ReactionButtons post={post} /></div>
+            <div className="reactions">
+                <ReactionButtons post={post} />
+            </div>
         </>
     );
 };
